@@ -46,7 +46,7 @@ pnpm exec supabase functions serve <nom>   # Edge Function en local
 
 ## Conventions
 
-- TypeScript strict partout ; Deno pour `supabase/functions` (`pnpm exec deno`, dépendance du dépôt), Node 22+ (`.nvmrc`) ailleurs — `supabase-js` ne fonctionne plus en Node 20.
+- TypeScript strict partout ; Deno pour `supabase/functions` (`pnpm exec deno`, version épinglée par pnpm), Node 22+ (`.nvmrc`) ailleurs — `supabase-js` ne fonctionne plus en Node 20.
 - `packages/core` est importé par Deno : imports relatifs avec extension `.ts`, pas de dépendance propre à Node.
 - Tools MCP : toujours via `db` (`asUser`, RLS de l'utilisateur), jamais via la connexion brute.
 - Code et identifiants en anglais (`inventory_item`, `cookRecipe`), textes visibles par l'utilisateur en français.

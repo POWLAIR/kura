@@ -24,29 +24,21 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
-  # Ne fait rien tant qu'il n'y a pas de migration.
+  # CLI Supabase et Deno aux versions du dépôt (lockfile), comme en local.
   database:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - id: migrations
-        run: echo "present=${{ hashFiles('supabase/migrations/*.sql') != '' }}" >> "$GITHUB_OUTPUT"
-      - uses: supabase/setup-cli@v3
-        if: steps.migrations.outputs.present == 'true'
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          version: latest
-      - if: steps.migrations.outputs.present == 'true'
-        run: supabase db start
-      - if: steps.migrations.outputs.present == 'true'
-        run: supabase db lint --fail-on error
-      - if: steps.migrations.outputs.present == 'true'
-        run: supabase test db
-      # Tests d'intégration des Edge Functions contre la base (RLS via asUser, clés API).
-      - uses: denoland/setup-deno@v2
-        if: steps.migrations.outputs.present == 'true'
-        with:
-          deno-version: v2.x
-      - if: steps.migrations.outputs.present == 'true'
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec supabase db start
+      - run: pnpm exec supabase db lint --fail-on error
+      - run: pnpm exec supabase test db
+      # Tests Deno des Edge Functions, dont l'intégration avec la base (RLS via asUser, clés API).
+      - run: pnpm functions:test
         env:
           KURA_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: deno test --config supabase/functions/mcp/deno.json --allow-env --allow-net supabase/functions/mcp/db_test.ts

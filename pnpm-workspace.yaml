@@ -5,5 +5,4 @@ packages:
 
 # Scripts d'installation autorisés (pnpm les bloque par défaut).
 allowBuilds:
-  deno: true # binaire Deno pour supabase/functions (deno check, deno test)
   esbuild: true # binaire natif utilisé par tsx

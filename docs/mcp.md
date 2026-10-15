@@ -66,4 +66,4 @@ Pour Claude Code, `.mcp.json` déclare le serveur `kura-local`, avec la clé lue
 
 ## Code partagé avec `packages/core`
 
-La fonction importe `@kura/core` grâce à l'import map de `supabase/functions/mcp/deno.json`, qui pointe vers `packages/core/src`. Deno exige des imports relatifs avec extension, donc `packages/core` écrit les siens avec `.ts` (`./schemas.ts`). Deno est une dépendance de dev du dépôt : utiliser `pnpm exec deno …`. L'edge runtime Supabase est compatible avec Deno 2.1.
+La fonction importe `@kura/core` grâce à l'import map de `supabase/functions/mcp/deno.json`, qui pointe vers `packages/core/src`. Deno exige des imports relatifs avec extension, donc `packages/core` écrit les siens avec `.ts` (`./schemas.ts`). Deno est épinglé par pnpm (`devEngines.runtime` du `package.json`, téléchargé à l'installation) : utiliser `pnpm exec deno …`. L'edge runtime Supabase est compatible avec Deno 2.1.
