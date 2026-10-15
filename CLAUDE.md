@@ -8,11 +8,12 @@ Outil personnel qui relie inventaire de cuisine, recettes, suivi alimentation/sp
 
 ```
 apps/mobile/          App Expo (phase 2, pas encore créée)
-packages/core/        Schémas Zod + logique métier partagés app ↔ MCP
+packages/core/        Schémas Zod + logique métier partagés app ↔ MCP (clés micronutriments : nutrients.ts)
+scripts/              Imports ponctuels exécutés en local (Ciqual, Notion)
 supabase/migrations/  Schéma Postgres, RLS, fonctions RPC (cook_recipe…)
 supabase/functions/   Edge Functions Deno : mcp, recipes, notion-export…
 supabase/tests/       Tests pgTAP (SQL + RLS)
-docs/                 Conception et décisions
+docs/                 Conception et décisions (ciqual.md : import et clés nutritionnelles)
 ```
 
 ## Commandes
@@ -25,6 +26,7 @@ pnpm db:start         # Supabase local (Docker)
 pnpm db:new <nom>     # nouvelle migration
 pnpm db:reset         # rejoue toutes les migrations + seed
 pnpm db:types         # régénère packages/core/src/database.types.ts
+pnpm import:ciqual <dossier> [--dry-run]   # remplit food_ref (voir docs/ciqual.md)
 pnpm exec supabase test db                 # tests pgTAP
 pnpm exec supabase functions serve <nom>   # Edge Function en local
 ```
@@ -41,7 +43,7 @@ pnpm exec supabase functions serve <nom>   # Edge Function en local
 
 ## Conventions
 
-- TypeScript strict partout ; Deno pour `supabase/functions`, Node/Expo ailleurs.
+- TypeScript strict partout ; Deno pour `supabase/functions`, Node 22+ (`.nvmrc`) ailleurs — `supabase-js` ne fonctionne plus en Node 20.
 - Code et identifiants en anglais (`inventory_item`, `cookRecipe`), textes visibles par l'utilisateur en français.
 - Migrations : jamais modifier une migration mergée (voir skill `new-migration`).
 - Compte GitHub : **POWLAIR** (`git@github.com:POWLAIR/kura.git`). Commits, push et PR se font avec ce compte — identité git locale `POWLAIR <114736502+POWLAIR@users.noreply.github.com>`, jamais l'adresse pro du `~/.gitconfig` global. Vérifier `git config user.email` et `gh auth status` avant de pousser.

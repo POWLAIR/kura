@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@12.6.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "check": "pnpm lint && pnpm typecheck && pnpm test",
@@ -14,7 +14,8 @@
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:new": "supabase migration new",
-    "db:types": "supabase gen types typescript --local > packages/core/src/database.types.ts"
+    "db:types": "supabase gen types typescript --local > packages/core/src/database.types.ts",
+    "import:ciqual": "pnpm --filter @kura/scripts import:ciqual"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
