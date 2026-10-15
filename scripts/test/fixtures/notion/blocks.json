@@ -1,0 +1,423 @@
+{
+  "object": "list",
+  "results": [
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000001",
+      "type": "paragraph",
+      "has_children": false,
+      "paragraph": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Fiche d'inventaire de la cuisine, mise à jour le 13 octobre 2026.",
+              "link": null
+            },
+            "plain_text": "Fiche d'inventaire de la cuisine, mise à jour le 13 octobre 2026.",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000002",
+      "type": "heading_2",
+      "has_children": false,
+      "heading_2": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "🌿 Épices et herbes",
+              "link": null
+            },
+            "plain_text": "🌿 Épices et herbes",
+            "href": null
+          }
+        ],
+        "color": "default",
+        "is_toggleable": false
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000003",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Thym",
+              "link": null
+            },
+            "plain_text": "Thym",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000004",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Clous de girofle",
+              "link": null
+            },
+            "plain_text": "Clous de girofle",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000005",
+      "type": "heading_2",
+      "has_children": false,
+      "heading_2": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "🍚 Féculents et bases",
+              "link": null
+            },
+            "plain_text": "🍚 Féculents et bases",
+            "href": null
+          }
+        ],
+        "color": "default",
+        "is_toggleable": false
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000006",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Riz long (grande quantité)",
+              "link": null
+            },
+            "plain_text": "Riz long (grande quantité)",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000007",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Lasagnes (feuilles sèches)",
+              "link": null
+            },
+            "plain_text": "Lasagnes (feuilles sèches)",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000008",
+      "type": "heading_2",
+      "has_children": false,
+      "heading_2": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "🥫 Sauces et condiments",
+              "link": null
+            },
+            "plain_text": "🥫 Sauces et condiments",
+            "href": null
+          }
+        ],
+        "color": "default",
+        "is_toggleable": false
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000009",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Moutarde",
+              "link": null
+            },
+            "plain_text": "Moutarde",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000010",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Sauce soja",
+              "link": null
+            },
+            "plain_text": "Sauce soja",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000011",
+      "type": "heading_2",
+      "has_children": false,
+      "heading_2": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "❄️ Frigo et congélateur",
+              "link": null
+            },
+            "plain_text": "❄️ Frigo et congélateur",
+            "href": null
+          }
+        ],
+        "color": "default",
+        "is_toggleable": false
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000012",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Pomme de terre (1)",
+              "link": null
+            },
+            "plain_text": "Pomme de terre (1)",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000013",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Œufs (une douzaine)",
+              "link": null
+            },
+            "plain_text": "Œufs (une douzaine)",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000014",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Patates douces (2, congélateur)",
+              "link": null
+            },
+            "plain_text": "Patates douces (2, congélateur)",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000015",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "",
+              "link": null
+            },
+            "plain_text": "",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000016",
+      "type": "heading_2",
+      "has_children": false,
+      "heading_2": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "🏺 Fait maison",
+              "link": null
+            },
+            "plain_text": "🏺 Fait maison",
+            "href": null
+          }
+        ],
+        "color": "default",
+        "is_toggleable": false
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000017",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Ratatouille en bocal",
+              "link": null
+            },
+            "plain_text": "Ratatouille en bocal",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000018",
+      "type": "divider",
+      "has_children": false,
+      "divider": {}
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000019",
+      "type": "heading_2",
+      "has_children": false,
+      "heading_2": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "🛒 À racheter",
+              "link": null
+            },
+            "plain_text": "🛒 À racheter",
+            "href": null
+          }
+        ],
+        "color": "default",
+        "is_toggleable": false
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000020",
+      "type": "paragraph",
+      "has_children": false,
+      "paragraph": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "À compléter au fil du temps.",
+              "link": null
+            },
+            "plain_text": "À compléter au fil du temps.",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    },
+    {
+      "object": "block",
+      "id": "00000000-0000-0000-0000-000000000021",
+      "type": "bulleted_list_item",
+      "has_children": false,
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Farine",
+              "link": null
+            },
+            "plain_text": "Farine",
+            "href": null
+          }
+        ],
+        "color": "default"
+      }
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false,
+  "type": "block",
+  "block": {},
+  "request_id": "00000000-0000-0000-0000-000000000000"
+}
