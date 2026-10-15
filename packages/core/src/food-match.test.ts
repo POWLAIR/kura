@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createFoodMatcher, type Food, matchFoods, normalizeFoodName } from "../src/food-match";
+import {
+  createFoodMatcher,
+  type Food,
+  matchFoods,
+  normalizeFoodName,
+  similarByName,
+} from "./food-match.ts";
 
 const foods: Food[] = [
   "Moutarde",
@@ -37,6 +43,17 @@ describe("createFoodMatcher", () => {
     ["Cannelle", "Cannelle, poudre"], // seul aliment de ce nom
   ])("lie « %s » à « %s »", (query, expected) => {
     expect(match(query)).toMatchObject({ status: "matched", by: "nom", food: { name: expected } });
+  });
+
+  it("ne choisit pas une entrée générique quand des variantes existent", () => {
+    const rice = createFoodMatcher(
+      ["Riz, mélange de variétés, cru", "Riz blanc, cru", "Riz thaï, cru"].map((name, i) => ({
+        id: i + 1,
+        code: String(i + 1),
+        name,
+      })),
+    );
+    expect(rice("Riz")).toMatchObject({ status: "unmatched" });
   });
 
   it("ne choisit pas entre deux formes du même aliment", () => {
@@ -78,5 +95,18 @@ describe("matchFoods", () => {
   it("refuse un choix pour un article absent ou un code inconnu", () => {
     expect(() => matchFoods(["Thym"], foods, { Tym: "1003" })).toThrow(/absent de la page/);
     expect(() => matchFoods(["Thym"], foods, { Thym: "99999" })).toThrow(/absent de food_ref/);
+  });
+});
+
+describe("similarByName", () => {
+  const items = [
+    { id: 1, name: "Riz long" },
+    { id: 2, name: "Farine de riz" },
+    { id: 3, name: "Sauce soja" },
+  ];
+
+  it("propose les articles qui partagent un mot, celui qui commence par ce mot d'abord", () => {
+    expect(similarByName("riz basmati", items).map((i) => i.id)).toEqual([1, 2]);
+    expect(similarByName("yuzu", items)).toEqual([]);
   });
 });

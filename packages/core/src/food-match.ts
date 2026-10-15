@@ -1,4 +1,4 @@
-import { fold } from "./text";
+import { fold } from "./text.ts";
 
 // Rapprochement d'un nom libre (« Œufs », « Clous de girofle ») avec food_ref.
 // Prudent : un lien faux donnerait des valeurs nutritionnelles fausses, donc on ne
@@ -15,7 +15,6 @@ export type FoodMatch =
 // Choix faits à la main : nom de l'article → code de l'aliment, ou null pour aucun.
 export type FoodChoices = Record<string, string | null>;
 
-const MAX_CANDIDATES = 3;
 // Mots outils, sans valeur pour départager des candidats.
 const STOPWORDS = new Set([
   "a",
@@ -42,43 +41,63 @@ export function normalizeFoodName(name: string): string {
     .join(" ");
 }
 
-type Entry = { food: Food; full: string; head: string; lead: string; words: Set<string> };
+type Indexed<T> = { value: T; full: string; head: string; lead: string; words: Set<string> };
 
-export function createFoodMatcher(foods: Food[]): (query: string) => FoodMatch {
-  // Les noms Ciqual suivent « Aliment, précision, précision » : la tête est l'aliment.
-  const entries: Entry[] = foods.map((food) => {
-    const full = normalizeFoodName(food.name);
-    return {
-      food,
-      full,
-      head: normalizeFoodName(food.name.split(",")[0] ?? ""),
-      lead: full.split(" ")[0] ?? "",
-      words: new Set(full.split(" ")),
-    };
-  });
+// Les noms Ciqual suivent « Aliment, précision, précision » : la tête est l'aliment.
+function indexed<T>(value: T, name: string): Indexed<T> {
+  const full = normalizeFoodName(name);
+  return {
+    value,
+    full,
+    head: normalizeFoodName(name.split(",")[0] ?? ""),
+    lead: full.split(" ")[0] ?? "",
+    words: new Set(full.split(" ")),
+  };
+}
 
+// Éléments partageant au moins un mot avec la requête (mots outils exclus), les plus
+// proches d'abord. Le premier mot nomme l'aliment (« Sauce tomate », « Huile d'olive ») :
+// il départage, puis le nom le plus court.
+function rank<T>(query: string, entries: Indexed<T>[], max: number): T[] {
+  const queryWords = query.split(" ").filter((w) => !STOPWORDS.has(w));
+  return entries
+    .map((e) => ({ e, shared: queryWords.filter((w) => e.words.has(w)).length }))
+    .filter(({ shared }) => shared > 0)
+    .sort(
+      (a, b) =>
+        b.shared - a.shared ||
+        Number(b.e.lead === queryWords[0]) - Number(a.e.lead === queryWords[0]) ||
+        a.e.full.length - b.e.full.length,
+    )
+    .slice(0, max)
+    .map(({ e }) => e.value);
+}
+
+export function createFoodMatcher(
+  foods: Food[],
+  { maxCandidates = 3 }: { maxCandidates?: number } = {},
+): (query: string) => FoodMatch {
+  const entries = foods.map((food) => indexed(food, food.name));
   return (query) => {
     const q = normalizeFoodName(query);
     const exact = entries.filter((e) => e.full === q);
+    // Seul aliment de ce nom avant la virgule (« Cannelle, poudre »), et aucune variante qui
+    // commence par ce nom : « Riz » reste ambigu (riz blanc, thaï, complet…).
     const sameHead = entries.filter((e) => e.head === q);
-    const unique = exact.length === 1 ? exact : sameHead.length === 1 ? sameHead : [];
-    if (unique[0]) return { status: "matched", food: unique[0].food, by: "nom" };
-
-    // Le premier mot nomme l'aliment (« Sauce tomate », « Huile d'olive ») : il départage.
-    const queryWords = q.split(" ").filter((w) => !STOPWORDS.has(w));
-    const candidates = entries
-      .map((e) => ({ e, shared: queryWords.filter((w) => e.words.has(w)).length }))
-      .filter(({ shared }) => shared > 0)
-      .sort(
-        (a, b) =>
-          b.shared - a.shared ||
-          Number(b.e.lead === queryWords[0]) - Number(a.e.lead === queryWords[0]) ||
-          a.e.food.name.length - b.e.food.name.length,
-      )
-      .slice(0, MAX_CANDIDATES)
-      .map(({ e }) => e.food);
-    return { status: "unmatched", candidates };
+    const variants = entries.some((e) => e.head.startsWith(`${q} `));
+    const unique = exact.length === 1 ? exact : sameHead.length === 1 && !variants ? sameHead : [];
+    if (unique[0]) return { status: "matched", food: unique[0].value, by: "nom" };
+    return { status: "unmatched", candidates: rank(q, entries, maxCandidates) };
   };
+}
+
+// Éléments au nom proche de la requête (articles de l'inventaire…), les plus proches d'abord.
+export function similarByName<T extends { name: string }>(query: string, items: T[], max = 3): T[] {
+  return rank(
+    normalizeFoodName(query),
+    items.map((item) => indexed(item, item.name)),
+    max,
+  );
 }
 
 // Rapproche chaque nom ; les choix manuels priment. Un choix qui ne vise aucun

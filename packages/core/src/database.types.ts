@@ -234,10 +234,35 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "inventory_status": {
+                  Row: {
+                    "category": Database["public"]['Enums']["inventory_category"] | null,"expires_on": string | null,"food_code": string | null,"food_name": string | null,"food_ref_id": number | null,"id": number | null,"level": Database["public"]['Enums']["stock_level"] | null,"location": Database["public"]['Enums']["inventory_location"] | null,"low_stock": boolean | null,"name": string | null,"quantity": number | null,"restock_level": Database["public"]['Enums']["stock_level"] | null,"restock_threshold": number | null,"unit": Database["public"]['Enums']["quantity_unit"] | null,"updated_at": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "inventory_item_food_ref_id_fkey"
+      columns: ["food_ref_id"]
+isOneToOne: false
+      referencedRelation: "food_ref"
+      referencedColumns: ["id"]
+    }
+                  ]
+                }
           }
           Functions: {
-            [_ in never]: never
+            "add_item":
+{ Args: { "p_category": Database["public"]['Enums']["inventory_category"],"p_expires_on"?: string,"p_food_ref_id"?: number,"p_location": Database["public"]['Enums']["inventory_location"],"p_name": string,"p_quantity"?: number,"p_unit"?: Database["public"]['Enums']["quantity_unit"] }; Returns: number
+                           },
+"restock_item":
+{ Args: { "p_expires_on"?: string,"p_item_id": number,"p_quantity"?: number,"p_unit"?: Database["public"]['Enums']["quantity_unit"] }; Returns: undefined
+                           },
+"stock_level_fraction":
+{ Args: { "level": Database["public"]['Enums']["stock_level"] }; Returns: number
+                           },
+"update_item":
+{ Args: { "p_changes": Json,"p_item_id": number }; Returns: undefined
+                           }
           }
           Enums: {
             "entry_source": "manuel"|"health_connect","food_source": "ciqual"|"off","inventory_category": "epices"|"feculents"|"sauces"|"frais"|"fait_maison","inventory_location": "placard"|"frigo"|"congelateur","quantity_unit": "g"|"ml"|"piece","recipe_origin": "generee"|"manuelle","stock_level": "plein"|"moitie"|"presque_vide","stock_movement_reason": "achat"|"cuisine"|"manuel"|"perime"
