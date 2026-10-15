@@ -29,7 +29,12 @@ create policy "api_key : lecture de ses lignes" on public.api_key for select to 
   using ((select auth.uid()) = user_id);
 create policy "api_key : ajout de ses lignes" on public.api_key for insert to authenticated
   with check ((select auth.uid()) = user_id);
-create policy "api_key : modification de ses lignes" on public.api_key for update to authenticated
-  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+-- Une session (app, tools MCP) ne peut que révoquer ses clés : ni les réactiver,
+-- ni réécrire hash, préfixe ou libellé. last_used_at est tenu par le serveur MCP.
+revoke update on public.api_key from authenticated;
+grant update (revoked_at) on public.api_key to authenticated;
+create policy "api_key : révocation de ses clés" on public.api_key for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id and revoked_at is not null);
 create policy "api_key : suppression de ses lignes" on public.api_key for delete to authenticated
   using ((select auth.uid()) = user_id);

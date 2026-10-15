@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(10);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@kura.test'),
@@ -58,8 +58,20 @@ select is(
   'B ne peut ni révoquer ni supprimer la clé de A'
 );
 
+select throws_ok(
+  $$ update public.api_key set key_hash = repeat('c', 64) $$,
+  '42501', null,
+  'A ne peut pas réécrire le hash de sa clé'
+);
+
 update public.api_key set revoked_at = now();
 select isnt((select revoked_at from public.api_key), null, 'A peut révoquer sa clé');
+
+select throws_ok(
+  $$ update public.api_key set revoked_at = null $$,
+  '42501', null,
+  'une clé révoquée ne peut pas être réactivée'
+);
 
 reset role;
 set local role anon;

@@ -1,15 +1,15 @@
 // Clés API du connecteur MCP (issue #5). Voir docs/mcp.md.
 //
 //   pnpm mcp:key --user <email> [--label <nom>]   crée une clé, affichée une seule fois
-//   pnpm mcp:key --revoke <début de clé>          révoque une clé (ex. kura_AbCdEfG)
+//   pnpm mcp:key --revoke <12 premiers caractères> révoque une clé (ex. kura_AbCdEfG)
 //
 // Seul le hash SHA-256 est enregistré dans api_key.
 import { parseArgs } from "node:util";
-import { API_KEY_VISIBLE_LENGTH, generateApiKey, hashApiKey } from "@kura/core";
+import { API_KEY_PREFIX, API_KEY_VISIBLE_LENGTH, generateApiKey, hashApiKey } from "@kura/core";
 import { createAdminClient, findUserId, loadEnv } from "./supabase";
 
 const USAGE =
-  "Usage : pnpm mcp:key --user <email> [--label <nom>]  |  pnpm mcp:key --revoke <début de clé>";
+  "Usage : pnpm mcp:key --user <email> [--label <nom>]  |  pnpm mcp:key --revoke <12 premiers caractères>";
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
@@ -28,6 +28,14 @@ async function main(): Promise<void> {
   const supabase = createAdminClient();
 
   if (values.revoke) {
+    if (
+      !values.revoke.startsWith(API_KEY_PREFIX) ||
+      values.revoke.length !== API_KEY_VISIBLE_LENGTH
+    ) {
+      throw new Error(
+        `Donne les ${API_KEY_VISIBLE_LENGTH} premiers caractères de la clé, ex. kura_AbCdEfG`,
+      );
+    }
     const { data, error } = await supabase
       .from("api_key")
       .select("id, label")

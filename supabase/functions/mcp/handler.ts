@@ -29,20 +29,28 @@ export function createHandler({ findCaller, buildServer }: HandlerDeps) {
     const rejected = originValidationResponse(request, localhostAllowedOrigins());
     if (rejected) return rejected;
 
+    const key = apiKeyFromHeader(request.headers.get("authorization"));
+    let caller: Caller | null = null;
     try {
-      const key = apiKeyFromHeader(request.headers.get("authorization"));
-      const caller = key ? await findCaller(await hashApiKey(key)) : null;
-      if (!caller) {
-        log("auth_refused", { reason: key ? "unknown_or_revoked" : "missing_or_malformed" });
-        // En-tête WWW-Authenticate : ASCII uniquement, d'où l'absence d'accents.
-        return bearerAuthChallengeResponse(
-          new OAuthError(OAuthErrorCode.InvalidToken, "Cle API absente, invalide ou revoquee"),
-        );
-      }
+      caller = key ? await findCaller(await hashApiKey(key)) : null;
+    } catch (error) {
+      // Base injoignable : surtout pas un 401, le client croirait sa clé révoquée.
+      log("auth_unavailable", { code: errorCode(error) });
+      return new Response(null, { status: 503, headers: { "retry-after": "5" } });
+    }
+    if (!caller) {
+      log("auth_refused", { reason: key ? "unknown_or_revoked" : "missing_or_malformed" });
+      // En-tête WWW-Authenticate : ASCII uniquement, d'où l'absence d'accents.
+      return bearerAuthChallengeResponse(
+        new OAuthError(OAuthErrorCode.InvalidToken, "Cle API absente, invalide ou revoquee"),
+      );
+    }
+
+    try {
       return await mcp.fetch(request, { authInfo: authInfoOf(caller) });
     } catch (error) {
       log("mcp_error", { code: errorCode(error) });
-      return bearerAuthChallengeResponse(error);
+      return new Response(null, { status: 500 });
     }
   };
 }

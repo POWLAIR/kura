@@ -13,14 +13,15 @@ Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`
 
 - **En-tête** : la clé est envoyée dans `Authorization: Bearer kura_…`. Elle fait 43 caractères aléatoires (32 octets) après le préfixe.
 - **Stockage** : la table `api_key` ne garde que le hash SHA-256 de la clé, et son début (`key_prefix`) pour la reconnaître. La clé en clair n'est affichée qu'une fois, à la création. Elle n'est jamais stockée ni loggée.
-- **Refus** : une clé absente, mal formée, inconnue ou révoquée reçoit un `401` avec `WWW-Authenticate: Bearer error="invalid_token"`.
+- **Droits d'une session** : une session (app ou tools MCP) peut créer, lire, révoquer et supprimer ses clés. Elle ne peut ni réactiver une clé révoquée, ni réécrire son hash.
+- **Refus** : une clé absente, mal formée, inconnue ou révoquée reçoit un `401` avec `WWW-Authenticate: Bearer error="invalid_token"`. Si la base ne répond pas, le serveur renvoie un `503` : le client réessaie au lieu de croire sa clé révoquée.
 - **Suivi** : chaque requête acceptée met à jour `last_used_at`.
 - **Vérification Supabase** : `verify_jwt = false` dans `supabase/config.toml`, car le serveur ne reçoit pas de JWT Supabase.
 - **Phase 3** : OAuth 2.1 de Supabase Auth.
 
 ```bash
 pnpm mcp:key --user <email> [--label "Claude desktop"]   # crée une clé (affichée une fois)
-pnpm mcp:key --revoke kura_AbCdEfG                        # révoque par le début de la clé
+pnpm mcp:key --revoke kura_AbCdEfG                        # révoque, par les 12 premiers caractères
 ```
 
 Lance `pnpm mcp:key` toi-même : la clé apparaît dans le terminal. Les variables `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont lues dans `.env`.
@@ -37,6 +38,7 @@ Règle pour les tools : ils reçoivent `db` (`UserDb`) et ne touchent jamais à 
 
 Les logs ne contiennent que des événements, des identifiants et des codes d'erreur (`log.ts`), jamais de contenu ni de message d'erreur Postgres, qui peut contenir des valeurs. Événements actuels :
 - `auth_refused`, avec la raison ;
+- `auth_unavailable`, avec le code ;
 - `mcp_error`, avec le code.
 
 ## En local

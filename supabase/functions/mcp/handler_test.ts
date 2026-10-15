@@ -61,6 +61,24 @@ for (const [name, headers] of Object.entries<Record<string, string>>({
   });
 }
 
+Deno.test("503 sans challenge quand la base ne répond pas : la clé n'est pas mise en cause", async () => {
+  const down = createHandler({
+    findCaller: () =>
+      Promise.reject(Object.assign(new Error("connexion refusée"), { code: "ECONNREFUSED" })),
+    buildServer: () => buildServer(() => Promise.reject(new Error("pas de base"))),
+  });
+  const res = await down(
+    new Request(URL_MCP, {
+      method: "POST",
+      headers: { authorization: `Bearer ${key}` },
+      body: "{}",
+    }),
+  );
+  assertEquals(res.status, 503);
+  assertEquals(res.headers.get("www-authenticate"), null);
+  await res.body?.cancel();
+});
+
 Deno.test("403 depuis une page web d'une autre origine", async () => {
   const res = await post({ authorization: `Bearer ${key}`, origin: "https://exemple.com" });
   assertEquals(res.status, 403);
