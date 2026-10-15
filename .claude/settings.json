@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm check)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm format)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm --filter:*)",
+      "Bash(pnpm exec biome:*)",
+      "Bash(pnpm exec vitest:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(pnpm db:start)",
+      "Bash(pnpm db:reset)",
+      "Bash(pnpm db:new:*)",
+      "Bash(pnpm db:types)",
+      "Bash(pnpm exec supabase status)",
+      "Bash(pnpm exec supabase migration list:*)",
+      "Bash(pnpm exec supabase db lint:*)",
+      "Bash(pnpm exec supabase db diff:*)",
+      "Bash(pnpm exec supabase functions serve:*)",
+      "Bash(pnpm exec supabase test db:*)",
+      "Bash(deno check:*)",
+      "Bash(deno test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git switch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run list:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./supabase/.env)",
+      "Bash(pnpm exec supabase db push:*)",
+      "Bash(pnpm exec supabase db reset --linked:*)",
+      "Bash(git push --force:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/format.mjs\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

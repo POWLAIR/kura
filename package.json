@@ -1,0 +1,24 @@
+{
+  "name": "kura",
+  "private": true,
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:new": "supabase migration new",
+    "db:types": "supabase gen types typescript --local > packages/core/src/database.types.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "supabase": "^2.120.0",
+    "typescript": "^7.0.2"
+  }
+}

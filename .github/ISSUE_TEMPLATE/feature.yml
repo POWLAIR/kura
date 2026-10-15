@@ -1,0 +1,34 @@
+name: Fonctionnalité
+description: Une tâche implémentable, assez précise pour être confiée à Claude
+labels: ["type:feature"]
+body:
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options: ["Phase 1 — Fondations", "Phase 2 — App de base", "Phase 3 — Recettes", "Phase 4 — Santé", "Phase 5 — Compagnon"]
+    validations: { required: true }
+  - type: textarea
+    id: goal
+    attributes:
+      label: Objectif
+      description: Ce que ça permet, en une ou deux phrases.
+    validations: { required: true }
+  - type: textarea
+    id: scope
+    attributes:
+      label: Périmètre
+      description: Fichiers / tables / tools MCP concernés, section de docs/conception.md.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d'acceptation
+      description: Liste vérifiable (tests attendus inclus).
+      value: |
+        - [ ]
+        - [ ] `pnpm check` passe
+    validations: { required: true }
+  - type: textarea
+    id: out
+    attributes:
+      label: Hors périmètre
