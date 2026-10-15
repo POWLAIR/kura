@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { MICRONUTRIENTS } from "@kura/core";
+import { MICRONUTRIENTS, NUTRIENT_DETAILS } from "@kura/core";
 import { describe, expect, it } from "vitest";
 import {
   checkConstituents,
+  DETAIL_CONSTITUENTS,
   MICRO_CONSTITUENTS,
   parseCiqual,
   parseCiqualValue,
@@ -75,8 +76,29 @@ describe("parseCiqual", () => {
     expect(byCode.get("9107")?.micronutrients).toEqual({});
   });
 
-  it("ignore les constituants non retenus (eau)", () => {
-    expect(JSON.stringify(byCode.get("9104"))).not.toContain("63.6");
+  it("range le détail des glucides et lipides, l'eau et l'alcool à part des micronutriments", () => {
+    expect(byCode.get("9104")?.nutrient_details).toEqual({ starch_g: 30.5, water_g: 63.6 });
+    expect(byCode.get("2028")?.nutrient_details).toEqual({});
+  });
+
+  it("ignore les constituants non retenus (protéines Jones, cendres) : aucun autre champ", () => {
+    expect(Object.keys(byCode.get("9104") ?? {}).sort()).toEqual(
+      [
+        "source",
+        "code",
+        "name",
+        "energy_kcal",
+        "protein_g",
+        "carbs_g",
+        "sugars_g",
+        "fat_g",
+        "saturated_fat_g",
+        "fiber_g",
+        "salt_g",
+        "micronutrients",
+        "nutrient_details",
+      ].sort(),
+    );
   });
 
   it("refuse une composition qui référence un aliment inconnu", () => {
@@ -103,10 +125,13 @@ describe("checkConstituents", () => {
     expect(() => checkConstituents(removed)).toThrow(/55100 absent/);
   });
 
-  it("couvre toutes les clés de micronutriments de @kura/core", () => {
-    const mapped = Object.values(MICRO_CONSTITUENTS)
+  it.each([
+    ["micronutrients", MICRO_CONSTITUENTS, MICRONUTRIENTS],
+    ["nutrient_details", DETAIL_CONSTITUENTS, NUTRIENT_DETAILS],
+  ] as const)("couvre toutes les clés %s de @kura/core", (_, mapping, defs) => {
+    const mapped = Object.values(mapping)
       .map((m) => m.key)
       .sort();
-    expect(mapped).toEqual(MICRONUTRIENTS.map((m) => m.key).sort());
+    expect(mapped).toEqual(defs.map((d) => d.key).sort());
   });
 });

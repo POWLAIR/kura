@@ -1,4 +1,10 @@
-import type { MicronutrientKey, Micronutrients, TablesInsert } from "@kura/core";
+import type {
+  MicronutrientKey,
+  Micronutrients,
+  NutrientDetailKey,
+  NutrientDetails,
+  TablesInsert,
+} from "@kura/core";
 import { XMLParser } from "fast-xml-parser";
 
 // Parsing de la table Ciqual (Anses), format XML : alim_*.xml, const_*.xml, compo_*.xml.
@@ -56,7 +62,39 @@ export const MICRO_CONSTITUENTS: Record<string, { key: MicronutrientKey; unit: U
   "10170": { key: "chloride_mg", unit: "mg" },
 };
 
-export type FoodRefRow = TablesInsert<"food_ref"> & { micronutrients: Micronutrients };
+export const DETAIL_CONSTITUENTS: Record<string, { key: NutrientDetailKey; unit: Unit }> = {
+  "33110": { key: "starch_g", unit: "g" },
+  "32480": { key: "sucrose_g", unit: "g" },
+  "32250": { key: "glucose_g", unit: "g" },
+  "32210": { key: "fructose_g", unit: "g" },
+  "32410": { key: "lactose_g", unit: "g" },
+  "32430": { key: "maltose_g", unit: "g" },
+  "32220": { key: "galactose_g", unit: "g" },
+  "40303": { key: "monounsaturated_fat_g", unit: "g" },
+  "40304": { key: "polyunsaturated_fat_g", unit: "g" },
+  "41819": { key: "oleic_acid_g", unit: "g" },
+  "41826": { key: "linoleic_acid_g", unit: "g" },
+  "41833": { key: "alpha_linolenic_acid_g", unit: "g" },
+  "42046": { key: "arachidonic_acid_g", unit: "g" },
+  "42053": { key: "epa_g", unit: "g" },
+  "42263": { key: "dha_g", unit: "g" },
+  "40400": { key: "butyric_acid_g", unit: "g" },
+  "40600": { key: "caproic_acid_g", unit: "g" },
+  "40800": { key: "caprylic_acid_g", unit: "g" },
+  "41000": { key: "capric_acid_g", unit: "g" },
+  "41200": { key: "lauric_acid_g", unit: "g" },
+  "41400": { key: "myristic_acid_g", unit: "g" },
+  "41600": { key: "palmitic_acid_g", unit: "g" },
+  "41800": { key: "stearic_acid_g", unit: "g" },
+  "75100": { key: "cholesterol_mg", unit: "mg" },
+  "400": { key: "water_g", unit: "g" },
+  "60000": { key: "alcohol_g", unit: "g" },
+};
+
+export type FoodRefRow = TablesInsert<"food_ref"> & {
+  micronutrients: Micronutrients;
+  nutrient_details: NutrientDetails;
+};
 
 /**
  * Convertit une teneur Ciqual en nombre.
@@ -99,6 +137,7 @@ export function checkConstituents(constXml: string): void {
   const expected = [
     ...Object.entries(MAIN_CONSTITUENTS),
     ...Object.entries(MICRO_CONSTITUENTS),
+    ...Object.entries(DETAIL_CONSTITUENTS),
   ].map(([code, { unit }]) => [code, unit] as const);
 
   for (const [code, unit] of expected) {
@@ -129,6 +168,7 @@ export function parseCiqual(files: { alim: string; const: string; compo: string 
       fiber_g: null,
       salt_g: null,
       micronutrients: {},
+      nutrient_details: {},
     });
   }
 
@@ -136,7 +176,8 @@ export function parseCiqual(files: { alim: string; const: string; compo: string 
     const constCode = String(compo.const_code);
     const main = MAIN_CONSTITUENTS[constCode];
     const micro = MICRO_CONSTITUENTS[constCode];
-    if (!main && !micro) continue;
+    const detail = DETAIL_CONSTITUENTS[constCode];
+    if (!main && !micro && !detail) continue;
 
     const row = rows.get(String(compo.alim_code));
     if (!row) throw new Error(`Aliment ${compo.alim_code} présent dans compo mais pas dans alim`);
@@ -145,6 +186,7 @@ export function parseCiqual(files: { alim: string; const: string; compo: string 
     if (value === null) continue;
     if (main) row[main.column] = value;
     if (micro) row.micronutrients[micro.key] = value;
+    if (detail) row.nutrient_details[detail.key] = value;
   }
 
   return [...rows.values()];

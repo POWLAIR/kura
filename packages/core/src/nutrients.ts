@@ -1,9 +1,20 @@
 import { z } from "zod";
 
-// Clés stables de food_ref.micronutrients, valeurs pour 100 g.
-// Ordre d'affichage : les plus courants d'abord (docs/conception.md, « Affichage nutritionnel »).
+// Clés stables des colonnes jsonb de food_ref, valeurs pour 100 g.
 // Une clé absente signifie « non renseignée » : on n'estime jamais une valeur manquante.
 // Ne jamais renommer une clé : elle est stockée telle quelle en base.
+// Le suffixe donne l'unité (_g, _mg, _ug).
+
+type NutrientDef = { key: string; label: string; unit: "g" | "mg" | "µg" };
+
+function keySchema<const T extends readonly NutrientDef[]>(defs: T) {
+  type Key = T[number]["key"];
+  const key = z.enum(defs.map((d) => d.key) as [Key, ...Key[]]);
+  return { key, values: z.partialRecord(key, z.number().nonnegative()) };
+}
+
+// food_ref.micronutrients : vitamines et minéraux.
+// Ordre d'affichage : les plus courants d'abord (docs/conception.md, « Affichage nutritionnel »).
 export const MICRONUTRIENTS = [
   { key: "iron_mg", label: "Fer", unit: "mg" },
   { key: "calcium_mg", label: "Calcium", unit: "mg" },
@@ -29,13 +40,77 @@ export const MICRONUTRIENTS = [
   { key: "copper_mg", label: "Cuivre", unit: "mg" },
   { key: "manganese_mg", label: "Manganèse", unit: "mg" },
   { key: "chloride_mg", label: "Chlorure", unit: "mg" },
-] as const;
+] as const satisfies readonly NutrientDef[];
 
-export type MicronutrientKey = (typeof MICRONUTRIENTS)[number]["key"];
+// food_ref.nutrient_details : détail des glucides et des lipides, puis autres constituants.
+// `parent` rattache une valeur à la ligne principale qu'elle détaille, pour l'affichage.
+export const NUTRIENT_DETAILS = [
+  { key: "starch_g", label: "Amidon", unit: "g", parent: "carbs_g" },
+  { key: "sucrose_g", label: "Saccharose", unit: "g", parent: "sugars_g" },
+  { key: "glucose_g", label: "Glucose", unit: "g", parent: "sugars_g" },
+  { key: "fructose_g", label: "Fructose", unit: "g", parent: "sugars_g" },
+  { key: "lactose_g", label: "Lactose", unit: "g", parent: "sugars_g" },
+  { key: "maltose_g", label: "Maltose", unit: "g", parent: "sugars_g" },
+  { key: "galactose_g", label: "Galactose", unit: "g", parent: "sugars_g" },
+  { key: "monounsaturated_fat_g", label: "AG monoinsaturés", unit: "g", parent: "fat_g" },
+  { key: "polyunsaturated_fat_g", label: "AG polyinsaturés", unit: "g", parent: "fat_g" },
+  {
+    key: "oleic_acid_g",
+    label: "Acide oléique (oméga 9)",
+    unit: "g",
+    parent: "monounsaturated_fat_g",
+  },
+  {
+    key: "linoleic_acid_g",
+    label: "Acide linoléique (oméga 6)",
+    unit: "g",
+    parent: "polyunsaturated_fat_g",
+  },
+  {
+    key: "alpha_linolenic_acid_g",
+    label: "Acide alpha-linolénique (oméga 3)",
+    unit: "g",
+    parent: "polyunsaturated_fat_g",
+  },
+  {
+    key: "arachidonic_acid_g",
+    label: "Acide arachidonique (oméga 6)",
+    unit: "g",
+    parent: "polyunsaturated_fat_g",
+  },
+  { key: "epa_g", label: "EPA (oméga 3)", unit: "g", parent: "polyunsaturated_fat_g" },
+  { key: "dha_g", label: "DHA (oméga 3)", unit: "g", parent: "polyunsaturated_fat_g" },
+  { key: "butyric_acid_g", label: "Acide butyrique (4:0)", unit: "g", parent: "saturated_fat_g" },
+  { key: "caproic_acid_g", label: "Acide caproïque (6:0)", unit: "g", parent: "saturated_fat_g" },
+  { key: "caprylic_acid_g", label: "Acide caprylique (8:0)", unit: "g", parent: "saturated_fat_g" },
+  { key: "capric_acid_g", label: "Acide caprique (10:0)", unit: "g", parent: "saturated_fat_g" },
+  { key: "lauric_acid_g", label: "Acide laurique (12:0)", unit: "g", parent: "saturated_fat_g" },
+  {
+    key: "myristic_acid_g",
+    label: "Acide myristique (14:0)",
+    unit: "g",
+    parent: "saturated_fat_g",
+  },
+  {
+    key: "palmitic_acid_g",
+    label: "Acide palmitique (16:0)",
+    unit: "g",
+    parent: "saturated_fat_g",
+  },
+  { key: "stearic_acid_g", label: "Acide stéarique (18:0)", unit: "g", parent: "saturated_fat_g" },
+  { key: "cholesterol_mg", label: "Cholestérol", unit: "mg", parent: null },
+  { key: "water_g", label: "Eau", unit: "g", parent: null },
+  { key: "alcohol_g", label: "Alcool", unit: "g", parent: null },
+] as const satisfies readonly (NutrientDef & { parent: string | null })[];
 
-export const MicronutrientKey = z.enum(
-  MICRONUTRIENTS.map((m) => m.key) as [MicronutrientKey, ...MicronutrientKey[]],
-);
-
-export const Micronutrients = z.partialRecord(MicronutrientKey, z.number().nonnegative());
+const micro = keySchema(MICRONUTRIENTS);
+export const MicronutrientKey = micro.key;
+export type MicronutrientKey = z.infer<typeof MicronutrientKey>;
+export const Micronutrients = micro.values;
 export type Micronutrients = z.infer<typeof Micronutrients>;
+
+const details = keySchema(NUTRIENT_DETAILS);
+export const NutrientDetailKey = details.key;
+export type NutrientDetailKey = z.infer<typeof NutrientDetailKey>;
+export const NutrientDetails = details.values;
+export type NutrientDetails = z.infer<typeof NutrientDetails>;

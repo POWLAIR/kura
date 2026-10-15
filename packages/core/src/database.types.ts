@@ -53,14 +53,14 @@ export type Database = {
                   ]
                 },"food_ref": {
                   Row: {
-                    "carbs_g": number | null,"code": string,"created_at": string,"energy_kcal": number | null,"fat_g": number | null,"fiber_g": number | null,"id": number,"micronutrients": NonNullable<Json>,"name": string,"piece_weight_g": number | null,"protein_g": number | null,"salt_g": number | null,"saturated_fat_g": number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g": number | null,"updated_at": string
+                    "carbs_g": number | null,"code": string,"created_at": string,"energy_kcal": number | null,"fat_g": number | null,"fiber_g": number | null,"id": number,"micronutrients": NonNullable<Json>,"name": string,"nutrient_details": NonNullable<Json>,"piece_weight_g": number | null,"protein_g": number | null,"salt_g": number | null,"saturated_fat_g": number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g": number | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "carbs_g"?: number | null,"code": string,"created_at"?: string,"energy_kcal"?: number | null,"fat_g"?: number | null,"fiber_g"?: number | null,"id"?: never,"micronutrients"?: NonNullable<Json>,"name": string,"piece_weight_g"?: number | null,"protein_g"?: number | null,"salt_g"?: number | null,"saturated_fat_g"?: number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g"?: number | null,"updated_at"?: string
+                    "carbs_g"?: number | null,"code": string,"created_at"?: string,"energy_kcal"?: number | null,"fat_g"?: number | null,"fiber_g"?: number | null,"id"?: never,"micronutrients"?: NonNullable<Json>,"name": string,"nutrient_details"?: NonNullable<Json>,"piece_weight_g"?: number | null,"protein_g"?: number | null,"salt_g"?: number | null,"saturated_fat_g"?: number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g"?: number | null,"updated_at"?: string
                   }
                   Update: {
-                    "carbs_g"?: number | null,"code"?: string,"created_at"?: string,"energy_kcal"?: number | null,"fat_g"?: number | null,"fiber_g"?: number | null,"id"?: never,"micronutrients"?: NonNullable<Json>,"name"?: string,"piece_weight_g"?: number | null,"protein_g"?: number | null,"salt_g"?: number | null,"saturated_fat_g"?: number | null,"source"?: Database["public"]['Enums']["food_source"],"sugars_g"?: number | null,"updated_at"?: string
+                    "carbs_g"?: number | null,"code"?: string,"created_at"?: string,"energy_kcal"?: number | null,"fat_g"?: number | null,"fiber_g"?: number | null,"id"?: never,"micronutrients"?: NonNullable<Json>,"name"?: string,"nutrient_details"?: NonNullable<Json>,"piece_weight_g"?: number | null,"protein_g"?: number | null,"salt_g"?: number | null,"saturated_fat_g"?: number | null,"source"?: Database["public"]['Enums']["food_source"],"sugars_g"?: number | null,"updated_at"?: string
                   }
                   Relationships: [
                     

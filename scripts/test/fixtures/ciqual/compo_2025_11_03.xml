@@ -153,4 +153,40 @@
       <code_confiance> A </code_confiance>
       <source_code> 1 </source_code>
    </COMPO>
+   <COMPO>
+      <alim_code> 9104 </alim_code>
+      <const_code> 33110 </const_code>
+      <teneur> 30,5 </teneur>
+      <min missing=" " />
+      <max missing=" " />
+      <code_confiance> A </code_confiance>
+      <source_code> 1 </source_code>
+   </COMPO>
+   <COMPO>
+      <alim_code> 9104 </alim_code>
+      <const_code> 75100 </const_code>
+      <teneur> - </teneur>
+      <min missing=" " />
+      <max missing=" " />
+      <code_confiance> A </code_confiance>
+      <source_code> 1 </source_code>
+   </COMPO>
+   <COMPO>
+      <alim_code> 9104 </alim_code>
+      <const_code> 41819 </const_code>
+      <teneur> &lt; 0,01 </teneur>
+      <min missing=" " />
+      <max missing=" " />
+      <code_confiance> A </code_confiance>
+      <source_code> 1 </source_code>
+   </COMPO>
+   <COMPO>
+      <alim_code> 9104 </alim_code>
+      <const_code> 10000 </const_code>
+      <teneur> 0,2 </teneur>
+      <min missing=" " />
+      <max missing=" " />
+      <code_confiance> A </code_confiance>
+      <source_code> 1 </source_code>
+   </COMPO>
 </TABLE>

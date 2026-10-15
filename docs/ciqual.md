@@ -74,7 +74,40 @@ Définies dans [`packages/core/src/nutrients.ts`](../packages/core/src/nutrients
 | `manganese_mg` | 10251 | Manganèse |
 | `chloride_mg` | 10170 | Chlorure |
 
-Non importés : eau, cendres, alcool, acides organiques, polyols, amidon, sucres et acides gras détaillés, cholestérol, formes détaillées des vitamines D, E, A et B9.
+## Clés de `nutrient_details`
+
+Détail des glucides et des lipides, puis autres constituants. Définies dans [`packages/core/src/nutrients.ts`](../packages/core/src/nutrients.ts) avec un `parent` (la ligne qu'elles détaillent à l'affichage). Mêmes règles : clé absente = non renseignée, jamais renommer.
+
+| Clé | `const_code` | Constituant Ciqual | Détaille |
+|---|---|---|---|
+| `starch_g` | 33110 | Amidon | `carbs_g` |
+| `sucrose_g` | 32480 | Saccharose | `sugars_g` |
+| `glucose_g` | 32250 | Glucose | `sugars_g` |
+| `fructose_g` | 32210 | Fructose | `sugars_g` |
+| `lactose_g` | 32410 | Lactose | `sugars_g` |
+| `maltose_g` | 32430 | Maltose | `sugars_g` |
+| `galactose_g` | 32220 | Galactose | `sugars_g` |
+| `monounsaturated_fat_g` | 40303 | AG monoinsaturés | `fat_g` |
+| `polyunsaturated_fat_g` | 40304 | AG polyinsaturés | `fat_g` |
+| `oleic_acid_g` | 41819 | AG 18:1 oléique (n-9) | `monounsaturated_fat_g` |
+| `linoleic_acid_g` | 41826 | AG 18:2 linoléique (n-6) | `polyunsaturated_fat_g` |
+| `alpha_linolenic_acid_g` | 41833 | AG 18:3 alpha-linolénique (n-3) | `polyunsaturated_fat_g` |
+| `arachidonic_acid_g` | 42046 | AG 20:4 arachidonique (n-6) | `polyunsaturated_fat_g` |
+| `epa_g` | 42053 | AG 20:5 EPA (n-3) | `polyunsaturated_fat_g` |
+| `dha_g` | 42263 | AG 22:6 DHA (n-3) | `polyunsaturated_fat_g` |
+| `butyric_acid_g` | 40400 | AG 4:0 butyrique | `saturated_fat_g` |
+| `caproic_acid_g` | 40600 | AG 6:0 caproïque | `saturated_fat_g` |
+| `caprylic_acid_g` | 40800 | AG 8:0 caprylique | `saturated_fat_g` |
+| `capric_acid_g` | 41000 | AG 10:0 caprique | `saturated_fat_g` |
+| `lauric_acid_g` | 41200 | AG 12:0 laurique | `saturated_fat_g` |
+| `myristic_acid_g` | 41400 | AG 14:0 myristique | `saturated_fat_g` |
+| `palmitic_acid_g` | 41600 | AG 16:0 palmitique | `saturated_fat_g` |
+| `stearic_acid_g` | 41800 | AG 18:0 stéarique | `saturated_fat_g` |
+| `cholesterol_mg` | 75100 | Cholestérol | — |
+| `water_g` | 400 | Eau | — |
+| `alcohol_g` | 60000 | Alcool (éthanol) | — |
+
+Non importés : cendres, acides organiques, polyols, protéines au facteur de Jones, énergie au facteur de Jones, formes détaillées des vitamines D, E, A et B9 (la valeur totale est déjà importée).
 
 ## Garde-fou
 
