@@ -1,0 +1,1 @@
+-- Données de développement local, rejouées par `pnpm db:reset`.

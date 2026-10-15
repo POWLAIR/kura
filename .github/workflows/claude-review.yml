@@ -6,7 +6,8 @@ on:
 
 jobs:
   review:
-    if: github.event.pull_request.draft == false
+    # Les PR Dependabot n'ont pas accès aux secrets : pas de review.
+    if: github.event.pull_request.draft == false && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read

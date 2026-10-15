@@ -30,11 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
-        if: hashFiles('supabase/functions/**/*.ts') != ''
+        if: hashFiles('supabase/functions/*/index.ts') != ''
         with:
           deno-version: v2.x
-      - if: hashFiles('supabase/functions/**/*.ts') != ''
-        run: deno check supabase/functions/**/*.ts
+      - if: hashFiles('supabase/functions/*/index.ts') != ''
+        run: deno check supabase/functions/*/index.ts
 
   database:
     runs-on: ubuntu-latest

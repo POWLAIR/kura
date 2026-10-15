@@ -7,6 +7,7 @@ const file = JSON.parse(input).tool_input?.file_path;
 if (file && /\.(ts|tsx|js|jsx|mjs|json|jsonc|css)$/.test(file)) {
   try {
     execFileSync("pnpm", ["exec", "biome", "check", "--write", "--no-errors-on-unmatched", file], {
+      cwd: process.env.CLAUDE_PROJECT_DIR,
       stdio: "ignore",
     });
   } catch {
