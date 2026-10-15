@@ -135,7 +135,17 @@ async function writeInventory(
     }
   } catch (error) {
     // Pas de transaction côté client : on retire les articles créés (cascade sur stock_movement).
-    if (created.length > 0) await supabase.from("inventory_item").delete().in("id", created);
+    if (created.length > 0) {
+      const { error: cleanupError } = await supabase
+        .from("inventory_item")
+        .delete()
+        .in("id", created);
+      if (cleanupError) {
+        console.error(
+          `Nettoyage impossible (${cleanupError.message}) : supprimer à la main les inventory_item ${created.join(", ")}`,
+        );
+      }
+    }
     throw error;
   }
 }
