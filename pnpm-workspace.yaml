@@ -2,5 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
   - "scripts"
+
+# Scripts d'installation autorisés (pnpm les bloque par défaut).
 allowBuilds:
-  esbuild: set this to true or false
+  esbuild: true # binaire natif utilisé par tsx
