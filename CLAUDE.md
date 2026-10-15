@@ -44,6 +44,7 @@ pnpm exec supabase functions serve <nom>   # Edge Function en local
 - TypeScript strict partout ; Deno pour `supabase/functions`, Node/Expo ailleurs.
 - Code et identifiants en anglais (`inventory_item`, `cookRecipe`), textes visibles par l'utilisateur en français.
 - Migrations : jamais modifier une migration mergée (voir skill `new-migration`).
+- Compte GitHub : **POWLAIR** (`git@github.com:POWLAIR/kura.git`). Commits, push et PR se font avec ce compte — identité git locale `POWLAIR <114736502+POWLAIR@users.noreply.github.com>`, jamais l'adresse pro du `~/.gitconfig` global. Vérifier `git config user.email` et `gh auth status` avant de pousser.
 - Branches `feat/<issue>-<slug>`, Conventional Commits en français, une PR par issue avec `Closes #N`.
 - Les issues sont organisées par milestone (Phase 1 → 5) et labels `phase-N` + module. Ne pas démarrer une phase avant que le critère de la précédente soit rempli.
 
