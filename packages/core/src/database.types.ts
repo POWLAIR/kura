@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "body_measure": {
+            "api_key": {
+                  Row: {
+                    "created_at": string,"id": number,"key_hash": string,"key_prefix": string,"label": string,"last_used_at": string | null,"revoked_at": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: never,"key_hash": string,"key_prefix": string,"label": string,"last_used_at"?: string | null,"revoked_at"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: never,"key_hash"?: string,"key_prefix"?: string,"label"?: string,"last_used_at"?: string | null,"revoked_at"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"body_measure": {
                   Row: {
                     "created_at": string,"external_id": string | null,"id": number,"idempotency_key": string | null,"measured_at": string,"source": Database["public"]['Enums']["entry_source"],"user_id": string,"weight_kg": number
                   }

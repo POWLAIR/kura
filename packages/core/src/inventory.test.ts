@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
-import { STOCK_LEVEL_FRACTION } from "./inventory";
-import { StockLevel } from "./schemas";
+import { STOCK_LEVEL_FRACTION } from "./inventory.ts";
+import { StockLevel } from "./schemas.ts";
 
 it("donne une fraction strictement positive et décroissante pour chaque niveau", () => {
   const fractions = StockLevel.options.map((level) => STOCK_LEVEL_FRACTION[level]);

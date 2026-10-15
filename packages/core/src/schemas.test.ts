@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Constants } from "./database.types";
+import { Constants } from "./database.types.ts";
 import {
   EntrySource,
   FoodSource,
@@ -10,7 +10,7 @@ import {
   RecipeOrigin,
   StockLevel,
   StockMovementReason,
-} from "./schemas";
+} from "./schemas.ts";
 
 describe("schémas", () => {
   it("accepte les emplacements connus", () => {

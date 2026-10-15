@@ -25,3 +25,15 @@ export function createAdminClient(): SupabaseClient<Database> {
     },
   );
 }
+
+// Id Supabase Auth d'un compte, par son email. Usage solo : une page d'utilisateurs suffit.
+export async function findUserId(
+  supabase: SupabaseClient<Database>,
+  email: string,
+): Promise<string> {
+  const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  if (error) throw new Error(`Lecture des utilisateurs : ${error.message}`);
+  const user = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+  if (!user) throw new Error(`Aucun utilisateur ${email} dans Supabase Auth`);
+  return user.id;
+}
