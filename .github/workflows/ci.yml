@@ -24,24 +24,31 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
+  # Les jobs suivants ne font rien tant que le dossier concerné est vide.
   edge-functions:
-    if: hashFiles('supabase/functions/**/*.ts') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
+        if: hashFiles('supabase/functions/**/*.ts') != ''
         with:
           deno-version: v2.x
-      - run: deno check supabase/functions/**/*.ts
+      - if: hashFiles('supabase/functions/**/*.ts') != ''
+        run: deno check supabase/functions/**/*.ts
 
   database:
-    if: hashFiles('supabase/migrations/*.sql') != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - id: migrations
+        run: echo "present=${{ hashFiles('supabase/migrations/*.sql') != '' }}" >> "$GITHUB_OUTPUT"
       - uses: supabase/setup-cli@v3
+        if: steps.migrations.outputs.present == 'true'
         with:
           version: latest
-      - run: supabase db start
-      - run: supabase db lint --fail-on error
-      - run: supabase test db
+      - if: steps.migrations.outputs.present == 'true'
+        run: supabase db start
+      - if: steps.migrations.outputs.present == 'true'
+        run: supabase db lint --fail-on error
+      - if: steps.migrations.outputs.present == 'true'
+        run: supabase test db
