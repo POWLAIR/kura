@@ -41,7 +41,7 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000b', 'b@kura.test');
 
 insert into public.food_ref (source, code, name, energy_kcal)
-values ('ciqual', '9100', 'Riz blanc, cuit', 130);
+values ('ciqual', 'test-riz', 'Riz blanc, cuit', 130); -- code fictif : la base locale peut contenir Ciqual
 
 create function pg_temp.login(uid uuid) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
@@ -51,11 +51,11 @@ set local role authenticated;
 select pg_temp.login('00000000-0000-0000-0000-00000000000a');
 
 insert into public.inventory_item (name, food_ref_id, category, location, quantity, unit)
-values ('Riz', (select id from public.food_ref where code = '9100'), 'feculents', 'placard', 1000, 'g');
+values ('Riz', (select id from public.food_ref where code = 'test-riz'), 'feculents', 'placard', 1000, 'g');
 insert into public.recipe (title, origin) values ('Riz teriyaki', 'manuelle');
 insert into public.meal (label, idempotency_key) values ('Riz teriyaki', 'cle-repas-0001');
 insert into public.meal_item (meal_id, food_ref_id, quantity_g)
-values ((select id from public.meal), (select id from public.food_ref), 150);
+values ((select id from public.meal), (select id from public.food_ref where code = 'test-riz'), 150);
 insert into public.stock_movement (inventory_item_id, delta, reason)
 values ((select id from public.inventory_item), -150, 'cuisine');
 insert into public.recipe_ingredient (recipe_id, inventory_item_id, quantity, unit)
@@ -123,7 +123,7 @@ select throws_ok(
 );
 select throws_ok(
   $$insert into public.meal_item (meal_id, food_ref_id, quantity_g)
-    values ((select meal_id from a_ids), (select id from public.food_ref), 10)$$,
+    values ((select meal_id from a_ids), (select id from public.food_ref where code = 'test-riz'), 10)$$,
   '23503', null,
   'B ne peut pas ajouter un aliment au repas de A'
 );
@@ -138,7 +138,7 @@ select throws_ok(
 -- food_ref : lecture seule pour les utilisateurs
 -- ---------------------------------------------------------------------------
 
-select is((select count(*)::int from public.food_ref), 1, 'food_ref lisible par B');
+select ok(exists (select 1 from public.food_ref where code = 'test-riz'), 'food_ref lisible par B');
 select throws_ok(
   $$insert into public.food_ref (source, code, name) values ('off', '3017620422003', 'Pâte à tartiner')$$,
   '42501', null,
