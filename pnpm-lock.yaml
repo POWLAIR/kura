@@ -169,6 +169,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.5.15
         version: 2.5.15
+      deno:
+        specifier: runtime:2.9.6
+        version: runtime:2.9.6
       supabase:
         specifier: ^2.120.0
         version: 2.120.0
@@ -187,7 +190,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: ^5.0.4
-        version: 5.0.4(vite@8.3.4)
+        version: 5.0.4(@types/node@22.20.5)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15))
 
   scripts:
     dependencies:
@@ -797,6 +800,69 @@ packages:
   chai@6.3.0:
     resolution: {integrity: sha512-XWAtwJ6OHO+tj0EKCs0Y2UamnyOxseZWltU4x2U2wh8g4AigdjwvtUjvLP2tqkA/avxHEtzxNaqGq/YGNwckKg==}
     engines: {node: '>=18'}
+
+  deno@runtime:2.9.6:
+    resolution:
+      type: variations
+      variants:
+        - resolution:
+            archive: zip
+            bin: deno
+            integrity: sha256-ITovME8E08nLUiBmmvrROPYKWqsf6Aliq96481gHpHI=
+            type: binary
+            url: https://github.com/denoland/deno/releases/download/v2.9.6/deno-aarch64-apple-darwin.zip
+          targets:
+            - cpu: arm64
+              os: darwin
+        - resolution:
+            archive: zip
+            bin: deno.exe
+            integrity: sha256-rLAUr+IpmEd2TiMrSZPhYuOUbN7sNmA+PxoLVIzR6lU=
+            type: binary
+            url: https://github.com/denoland/deno/releases/download/v2.9.6/deno-aarch64-pc-windows-msvc.zip
+          targets:
+            - cpu: arm64
+              os: win32
+        - resolution:
+            archive: zip
+            bin: deno
+            integrity: sha256-mkavxsOSx80v9xoxVYk1VFtGQI0Oh/eoaQjHEnIcBG4=
+            type: binary
+            url: https://github.com/denoland/deno/releases/download/v2.9.6/deno-aarch64-unknown-linux-gnu.zip
+          targets:
+            - cpu: arm64
+              os: linux
+        - resolution:
+            archive: zip
+            bin: deno
+            integrity: sha256-fUUkuCvMVX/gIKGltWlW7UK5kq5bKAJuitXRcylTP18=
+            type: binary
+            url: https://github.com/denoland/deno/releases/download/v2.9.6/deno-x86_64-apple-darwin.zip
+          targets:
+            - cpu: x64
+              os: darwin
+        - resolution:
+            archive: zip
+            bin: deno.exe
+            integrity: sha256-FeUwCwujw2ladiHZAWCnRuyecQIozuY5r6nVgPbjzRE=
+            type: binary
+            url: https://github.com/denoland/deno/releases/download/v2.9.6/deno-x86_64-pc-windows-msvc.zip
+          targets:
+            - cpu: x64
+              os: win32
+            - cpu: arm64
+              os: win32
+        - resolution:
+            archive: zip
+            bin: deno
+            integrity: sha256-OU8H9Nor6+bObx584PoWQpspsIw14/rD/iWXJnbf9LI=
+            type: binary
+            url: https://github.com/denoland/deno/releases/download/v2.9.6/deno-x86_64-unknown-linux-gnu.zip
+          targets:
+            - cpu: x64
+              os: linux
+    version: 2.9.6
+    hasBin: true
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -1421,15 +1487,6 @@ snapshots:
     optionalDependencies:
       vite: 8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15)
 
-  '@vitest/mocker@5.0.4(vite@8.3.4)':
-    dependencies:
-      '@jridgewell/trace-mapping': 0.3.31
-      '@vitest/spy': 5.0.4
-      estree-walker: 3.0.3
-      magic-string: 1.4.3
-    optionalDependencies:
-      vite: 8.3.4
-
   '@vitest/spy@5.0.4': {}
 
   anynum@1.0.1: {}
@@ -1437,6 +1494,8 @@ snapshots:
   assertion-error@2.0.1: {}
 
   chai@6.3.0: {}
+
+  deno@runtime:2.9.6: {}
 
   detect-libc@2.1.2: {}
 
@@ -1665,16 +1724,6 @@ snapshots:
 
   undici-types@6.21.0: {}
 
-  vite@8.3.4:
-    dependencies:
-      lightningcss: 1.33.0
-      picomatch: 4.0.7
-      postcss: 8.5.30
-      rolldown: 1.2.14
-      tinyglobby: 0.2.17
-    optionalDependencies:
-      fsevents: 2.3.3
-
   vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15):
     dependencies:
       lightningcss: 1.33.0
@@ -1706,25 +1755,6 @@ snapshots:
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@types/node': 22.20.5
-    transitivePeerDependencies:
-      - msw
-
-  vitest@5.0.4(vite@8.3.4):
-    dependencies:
-      '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.4(vite@8.3.4)
-      chai: 6.3.0
-      es-module-lexer: 2.3.2
-      expect-type: 1.4.0
-      magic-string: 1.4.3
-      obug: 3.0.0
-      picomatch: 4.0.7
-      std-env: 4.3.0
-      tinybench: 6.2.2
-      tinyexec: 1.3.1
-      tinyglobby: 0.2.17
-      vite: 8.3.4
-      why-is-node-running: 3.2.1
     transitivePeerDependencies:
       - msw
 

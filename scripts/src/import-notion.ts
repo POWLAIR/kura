@@ -19,7 +19,7 @@ import {
   notionPageId,
   parseInventoryBlocks,
 } from "./notion";
-import { createAdminClient, loadEnv, requireEnv } from "./supabase";
+import { createAdminClient, findUserId, loadEnv, requireEnv } from "./supabase";
 
 const NOTION_VERSION = "2025-09-03";
 const PAGE_SIZE = 1000; // max_rows de l'API Supabase
@@ -68,15 +68,6 @@ async function loadCiqual(supabase: Admin): Promise<Food[]> {
   }
   if (foods.length === 0) throw new Error("food_ref est vide : lancer d'abord pnpm import:ciqual");
   return foods;
-}
-
-async function findUserId(supabase: Admin, email: string): Promise<string> {
-  // Usage solo : une seule page d'utilisateurs suffit.
-  const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  if (error) throw new Error(`Lecture des utilisateurs : ${error.message}`);
-  const user = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-  if (!user) throw new Error(`Aucun utilisateur ${email} dans Supabase Auth`);
-  return user.id;
 }
 
 async function assertEmptyInventory(supabase: Admin, userId: string): Promise<void> {

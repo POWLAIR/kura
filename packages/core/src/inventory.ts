@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { StockLevel } from "./schemas";
+import type { StockLevel } from "./schemas.ts";
 
 // stock_movement.delta d'un article suivi en niveau (sans quantité chiffrée) :
 // fraction d'un contenant plein. Un pot acheté plein puis fini en deux fois :

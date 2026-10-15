@@ -1,4 +1,5 @@
-export type { Database, Json, Tables, TablesInsert, TablesUpdate } from "./database.types";
-export * from "./inventory";
-export * from "./nutrients";
-export * from "./schemas";
+export * from "./api-key.ts";
+export type { Database, Json, Tables, TablesInsert, TablesUpdate } from "./database.types.ts";
+export * from "./inventory.ts";
+export * from "./nutrients.ts";
+export * from "./schemas.ts";

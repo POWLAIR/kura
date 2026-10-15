@@ -6,6 +6,7 @@
   "scripts": {
     "import:ciqual": "tsx src/import-ciqual.ts",
     "import:notion": "tsx src/import-notion.ts",
+    "mcp:key": "tsx src/mcp-key.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

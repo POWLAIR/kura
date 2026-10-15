@@ -3,6 +3,13 @@
     "supabase-local": {
       "type": "http",
       "url": "http://127.0.0.1:54321/mcp"
+    },
+    "kura-local": {
+      "type": "http",
+      "url": "http://127.0.0.1:54321/functions/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${KURA_MCP_KEY}"
+      }
     }
   }
 }

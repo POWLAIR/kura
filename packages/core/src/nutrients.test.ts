@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MICRONUTRIENTS, Micronutrients, NUTRIENT_DETAILS, NutrientDetails } from "./nutrients";
+import { MICRONUTRIENTS, Micronutrients, NUTRIENT_DETAILS, NutrientDetails } from "./nutrients.ts";
 
 const SUFFIX = { g: "_g", mg: "_mg", µg: "_ug" } as const;
 const MAIN_COLUMNS = ["carbs_g", "sugars_g", "fat_g", "saturated_fat_g"];

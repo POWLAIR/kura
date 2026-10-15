@@ -24,18 +24,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
-  # Les jobs suivants ne font rien tant que le dossier concerné est vide.
-  edge-functions:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: denoland/setup-deno@v2
-        if: hashFiles('supabase/functions/*/index.ts') != ''
-        with:
-          deno-version: v2.x
-      - if: hashFiles('supabase/functions/*/index.ts') != ''
-        run: deno check supabase/functions/*/index.ts
-
+  # Ne fait rien tant qu'il n'y a pas de migration.
   database:
     runs-on: ubuntu-latest
     steps:
@@ -52,3 +41,12 @@ jobs:
         run: supabase db lint --fail-on error
       - if: steps.migrations.outputs.present == 'true'
         run: supabase test db
+      # Tests d'intégration des Edge Functions contre la base (RLS via asUser, clés API).
+      - uses: denoland/setup-deno@v2
+        if: steps.migrations.outputs.present == 'true'
+        with:
+          deno-version: v2.x
+      - if: steps.migrations.outputs.present == 'true'
+        env:
+          KURA_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: deno test --config supabase/functions/mcp/deno.json --allow-env --allow-net supabase/functions/mcp/db_test.ts
