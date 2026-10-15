@@ -1,0 +1,25 @@
+name: Bug
+description: Un comportement incorrect
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Ce qui se passe
+      description: Ne colle aucune donnée de santé réelle (repas, poids) — remplace par des valeurs fictives.
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ce qui était attendu
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Étapes, ou appel MCP / RPC exact.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Où
+      options: ["MCP (via Claude)", "App Android", "PWA", "Base / RPC", "Edge Function"]

@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.turbo/
+*.log
+.DS_Store
+coverage/
+
+# env
+.env
+.env.*
+!.env.example
+
+# Expo
+.expo/
+apps/*/android/
+apps/*/ios/
+*.jks
+*.keystore
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Claude Code (réglages perso)
+.claude/settings.local.json
+CLAUDE.local.md
