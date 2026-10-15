@@ -8,6 +8,7 @@ Cuisine, suivi et compagnon : inventaire, recettes générées depuis le stock, 
 ## Démarrer
 
 ```bash
+nvm use          # Node 22 (.nvmrc)
 pnpm install
 cp .env.example .env
 pnpm db:start

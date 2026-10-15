@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<TABLE>
+   <ALIM>
+      <alim_code> 9104 </alim_code>
+      <alim_nom_fr> Riz blanc, cuit, sans sel ajouté </alim_nom_fr>
+      <alim_nom_eng> White rice, cooked, unsalted </alim_nom_eng>
+      <alim_grp_code> 03 </alim_grp_code>
+   </ALIM>
+   <ALIM>
+      <alim_code> 2028 </alim_code>
+      <alim_nom_fr> Jus d&apos;orange, frais </alim_nom_fr>
+      <alim_nom_eng> Orange juice, fresh </alim_nom_eng>
+      <alim_grp_code> 06 </alim_grp_code>
+   </ALIM>
+   <ALIM>
+      <alim_code> 9107 </alim_code>
+      <alim_nom_fr> Riz blanc, précuit, cuit, sans sel ajouté </alim_nom_fr>
+      <alim_nom_eng> White rice, precooked, cooked, unsalted </alim_nom_eng>
+      <alim_grp_code> 03 </alim_grp_code>
+   </ALIM>
+</TABLE>

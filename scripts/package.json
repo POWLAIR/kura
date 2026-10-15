@@ -1,0 +1,22 @@
+{
+  "name": "@kura/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "import:ciqual": "tsx src/import-ciqual.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  },
+  "dependencies": {
+    "@kura/core": "workspace:*",
+    "@supabase/supabase-js": "^2.117.3",
+    "fast-xml-parser": "^5.11.2"
+  }
+}
