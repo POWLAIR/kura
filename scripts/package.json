@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "import:ciqual": "tsx src/import-ciqual.ts",
+    "import:notion": "tsx src/import-notion.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -17,6 +18,7 @@
   "dependencies": {
     "@kura/core": "workspace:*",
     "@supabase/supabase-js": "^2.117.3",
-    "fast-xml-parser": "^5.11.2"
+    "fast-xml-parser": "^5.11.2",
+    "zod": "^4.6.7"
   }
 }

@@ -15,7 +15,8 @@
     "db:reset": "supabase db reset",
     "db:new": "supabase migration new",
     "db:types": "supabase gen types typescript --local > packages/core/src/database.types.ts",
-    "import:ciqual": "pnpm --filter @kura/scripts import:ciqual"
+    "import:ciqual": "pnpm --filter @kura/scripts import:ciqual",
+    "import:notion": "pnpm --filter @kura/scripts import:notion"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

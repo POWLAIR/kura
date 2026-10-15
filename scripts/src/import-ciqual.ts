@@ -6,11 +6,10 @@
 // https://doi.org/10.57745/RDMHWY : alim_*.xml, const_*.xml, compo_*.xml.
 // Idempotent : upsert sur (source, code). Les colonnes absentes du payload
 // (piece_weight_g, saisi plus tard) ne sont pas écrasées.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import type { Database } from "@kura/core";
-import { createClient } from "@supabase/supabase-js";
 import { type FoodRefRow, parseCiqual } from "./ciqual";
+import { createAdminClient, loadEnv } from "./supabase";
 
 const BATCH_SIZE = 500;
 
@@ -25,12 +24,7 @@ function findFile(dir: string, prefix: string): string {
 }
 
 async function upsert(rows: FoodRefRow[]): Promise<void> {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis (voir .env.example)");
-  }
-  const supabase = createClient<Database>(url, key, { auth: { persistSession: false } });
+  const supabase = createAdminClient();
 
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
@@ -65,8 +59,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const envFile = resolve(import.meta.dirname, "../../.env");
-  if (existsSync(envFile)) process.loadEnvFile(envFile);
+  loadEnv();
   await upsert(rows);
   console.log("Import terminé.");
 }

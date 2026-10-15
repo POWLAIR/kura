@@ -13,7 +13,7 @@ scripts/              Imports ponctuels exécutés en local (Ciqual, Notion)
 supabase/migrations/  Schéma Postgres, RLS, fonctions RPC (cook_recipe…)
 supabase/functions/   Edge Functions Deno : mcp, recipes, notion-export…
 supabase/tests/       Tests pgTAP (SQL + RLS)
-docs/                 Conception et décisions (ciqual.md : import et clés nutritionnelles)
+docs/                 Conception et décisions (ciqual.md, notion.md : imports)
 ```
 
 ## Commandes
@@ -27,6 +27,7 @@ pnpm db:new <nom>     # nouvelle migration
 pnpm db:reset         # rejoue toutes les migrations + seed
 pnpm db:types         # régénère packages/core/src/database.types.ts
 pnpm import:ciqual <dossier> [--dry-run]   # remplit food_ref (voir docs/ciqual.md)
+pnpm import:notion <page> --dry-run        # inventaire initial depuis Notion (voir docs/notion.md)
 pnpm exec supabase test db                 # tests pgTAP
 pnpm exec supabase functions serve <nom>   # Edge Function en local
 ```
