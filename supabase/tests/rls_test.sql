@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(29);
+select plan(30);
 
 -- ---------------------------------------------------------------------------
 -- Structure
@@ -107,6 +107,12 @@ select throws_ok(
 
 update public.inventory_item set quantity = 0 where id = (select item_id from a_ids);
 delete from public.meal where id = (select meal_id from a_ids);
+
+select throws_ok(
+  $$truncate public.workout$$,
+  '42501', null,
+  'TRUNCATE interdit (il contournerait la RLS)'
+);
 
 -- Clés étrangères composites : impossible de rattacher ses lignes à celles de A.
 select throws_ok(

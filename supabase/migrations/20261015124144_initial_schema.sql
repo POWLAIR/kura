@@ -291,6 +291,8 @@ begin
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon', t);
+    -- TRUNCATE n'est pas soumis à la RLS : retiré avec les autres privilèges inutiles.
+    execute format('revoke truncate, references, trigger on public.%I from authenticated', t);
     execute format(
       'create policy "%1$s : lecture de ses lignes" on public.%1$I for select to authenticated
          using ((select auth.uid()) = user_id)', t);
@@ -309,4 +311,4 @@ $$;
 
 -- food_ref : aucune écriture hors service_role.
 revoke all on public.food_ref from anon;
-revoke insert, update, delete, truncate on public.food_ref from authenticated;
+revoke insert, update, delete, truncate, references, trigger on public.food_ref from authenticated;
