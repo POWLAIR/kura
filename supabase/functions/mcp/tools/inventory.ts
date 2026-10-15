@@ -13,6 +13,7 @@ import {
   UpdateItemInput,
 } from "@kura/core";
 import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
+import type postgres from "postgres";
 import type { Tx } from "../db.ts";
 import type { UserDb } from "../server.ts";
 
@@ -44,10 +45,14 @@ function fail(message: string): CallToolResult {
   return { isError: true, content: [{ type: "text", text: message }] };
 }
 
+// Saisie refusée côté TypeScript, renvoyée à Claude comme les erreurs SQL attendues.
+class InputError extends Error {}
+
 async function userErrors(run: () => Promise<CallToolResult>): Promise<CallToolResult> {
   try {
     return await run();
   } catch (error) {
+    if (error instanceof InputError) return fail(error.message);
     const code = (error as { code?: unknown }).code;
     if (typeof code === "string" && USER_ERRORS.has(code) && error instanceof Error) {
       return fail(error.message);
@@ -154,6 +159,35 @@ async function addItems(tx: Tx, items: PurchaseItem[]) {
   return { created: view(created), restocked: view(onlyRestocked), ambiguous };
 }
 
+// Rejoué avec la même clé d'idempotence, l'appel renvoie la réponse enregistrée sans rien
+// réécrire. La clé est réservée dans la transaction de l'appel : en cas d'échec, elle est
+// libérée avec le reste ; deux appels simultanés se sérialisent sur la contrainte unique.
+async function addItemsOnce(tx: Tx, { items, idempotency_key: key }: AddItemsInput) {
+  if (!key) return addItems(tx, items);
+  const [claim] = await tx<{ id: number }[]>`
+    insert into public.idempotent_call (idempotency_key, tool) values (${key}, 'add_items')
+    on conflict (user_id, idempotency_key) do nothing
+    returning id`;
+  if (!claim) {
+    const [previous] = await tx<{ tool: string; response: Record<string, unknown> }[]>`
+      select tool, response from public.idempotent_call where idempotency_key = ${key}`;
+    if (previous?.tool !== "add_items") {
+      throw new InputError(
+        `Clé d'idempotence déjà utilisée par ${previous?.tool ?? "un autre appel"}`,
+      );
+    }
+    return { replayed: true, ...previous.response };
+  }
+  const result = await addItems(tx, items);
+  await tx`update public.idempotent_call
+           set response = ${tx.json(result as unknown as postgres.JSONValue)}
+           where id = ${claim.id}`;
+  return result;
+}
+
+// Libellé du suivi d'un article : son unité, ou « niveau ».
+const tracking = (unit: string | null) => unit ?? "niveau";
+
 export function registerInventoryTools(server: McpServer, db: UserDb): void {
   server.registerTool(
     "get_inventory",
@@ -172,10 +206,10 @@ export function registerInventoryTools(server: McpServer, db: UserDb): void {
     {
       title: "Ajouter des courses",
       description:
-        "Enregistre des articles achetés (ticket de caisse, courses dictées). Un article déjà en stock sous ce nom, ou lié au même aliment, est réapprovisionné ; sinon il est créé. Sans quantité, l'article est suivi en niveau (pot, bouteille, épice). Rien n'est deviné : chaque article ambigu est renvoyé dans « ambiguous » avec une raison, des candidats (food_ref_id) ou des articles existants (item_id) ; relancer seulement ceux-là avec la précision demandée. Les articles créés ou réapprovisionnés le sont une seule fois : ne pas les renvoyer.",
+        "Enregistre des articles achetés (ticket de caisse, courses dictées). Un article déjà en stock sous ce nom, ou lié au même aliment, est réapprovisionné ; sinon il est créé. Sans quantité, l'article est suivi en niveau (pot, bouteille, épice). Rien n'est deviné : chaque article ambigu est renvoyé dans « ambiguous » avec une raison, des candidats (food_ref_id) ou des articles existants (item_id) ; relancer seulement ceux-là avec la précision demandée. Les articles créés ou réapprovisionnés ne doivent pas être renvoyés. Donner une idempotency_key nouvelle à chaque enregistrement : un appel rejoué avec la même clé (« replayed ») ne réenregistre rien.",
       inputSchema: AddItemsInput,
     },
-    ({ items }) => userErrors(async () => ok(await db((tx) => addItems(tx, items)))),
+    (input) => userErrors(async () => ok(await db((tx) => addItemsOnce(tx, input)))),
   );
 
   server.registerTool(
@@ -189,13 +223,22 @@ export function registerInventoryTools(server: McpServer, db: UserDb): void {
     },
     ({ item_id, changes }) =>
       userErrors(async () => {
-        const row = await db(async (tx) => {
+        const { before, after } = await db(async (tx) => {
+          const [before] = await tx<{ unit: string | null }[]>`
+            select unit from public.inventory_item where id = ${item_id}`;
           await tx`select public.update_item(${item_id}::bigint, ${tx.json(toStockChanges(changes))}::jsonb)`;
-          const [updated] = await tx<Status[]>`
+          const [after] = await tx<Status[]>`
             select * from public.inventory_status where id = ${item_id}`;
-          return updated;
+          return { before, after };
         });
-        return row ? ok({ updated: itemView(row) }) : fail(`Article ${item_id} introuvable`);
+        if (!before || !after) return fail(`Article ${item_id} introuvable`);
+        // Changement d'unité ou de mode : le dire, l'ancien suivi est perdu.
+        const [from, to] = [tracking(before.unit), tracking(after.unit)];
+        const notice =
+          from === to
+            ? undefined
+            : `Suivi changé de « ${from} » à « ${to} » : ancien seuil de rachat effacé, aucun mouvement de stock enregistré.`;
+        return ok({ updated: itemView(after), ...(notice && { notice }) });
       }),
   );
 

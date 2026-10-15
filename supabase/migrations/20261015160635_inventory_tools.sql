@@ -2,7 +2,7 @@
 --
 -- Lecture : vue inventory_status (aliment lié, indicateur « à racheter »).
 -- Écriture : add_item, restock_item, update_item écrivent l'article et son
--- stock_movement dans la même transaction. Toutes en security invoker : la RLS de
+-- stock_movement dans la même transaction ; idempotent_call rend add_items rejouable. Toutes en security invoker : la RLS de
 -- l'utilisateur s'applique, user_id vient de auth.uid().
 
 -- ---------------------------------------------------------------------------
@@ -56,6 +56,39 @@ left join public.food_ref f on f.id = i.food_ref_id;
 comment on view public.inventory_status is 'Inventaire avec aliment lié et indicateur low_stock (liste « À racheter »).';
 
 revoke all on public.inventory_status from anon;
+
+-- ---------------------------------------------------------------------------
+-- Appels rejouables
+-- ---------------------------------------------------------------------------
+
+-- Clé d'idempotence d'un appel d'écriture groupé (add_items) : rejoué avec la même clé,
+-- l'appel renvoie la réponse enregistrée sans rien réécrire. Les tools log_* ont leur
+-- propre colonne idempotency_key (meal, workout, body_measure).
+create table public.idempotent_call (
+  id bigint generated always as identity primary key,
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  idempotency_key text not null check (length(idempotency_key) between 8 and 128),
+  tool text not null check (length(tool) > 0),
+  response jsonb,
+  created_at timestamptz not null default now(),
+  unique (user_id, idempotency_key)
+);
+
+comment on table public.idempotent_call is 'Réponses des appels d''écriture déjà traités, par clé d''idempotence.';
+
+alter table public.idempotent_call enable row level security;
+revoke all on public.idempotent_call from anon;
+revoke truncate, references, trigger on public.idempotent_call from authenticated;
+
+create policy "idempotent_call : lecture de ses lignes" on public.idempotent_call
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "idempotent_call : ajout de ses lignes" on public.idempotent_call
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "idempotent_call : modification de ses lignes" on public.idempotent_call
+  for update to authenticated
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "idempotent_call : suppression de ses lignes" on public.idempotent_call
+  for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- ---------------------------------------------------------------------------
 -- Écriture
@@ -221,6 +254,15 @@ begin
   end if;
   if p_changes ? 'restock_level' then
     v_new.restock_level := (p_changes ->> 'restock_level')::public.stock_level;
+  end if;
+
+  if v_new.restock_threshold is not null and v_new.quantity is null then
+    raise exception '« % » est suivi en niveau : utiliser restock_level', v_new.name
+      using errcode = '22023';
+  end if;
+  if v_new.restock_level is not null and v_new.level is null then
+    raise exception '« % » est suivi en quantité : utiliser restock_threshold', v_new.name
+      using errcode = '22023';
   end if;
 
   update public.inventory_item

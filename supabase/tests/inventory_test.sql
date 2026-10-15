@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(28);
+select plan(33);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@kura.test'),
@@ -117,6 +117,26 @@ select throws_ok(
   '22023', 'Quantité et unité requises pour « Œufs »', 'passage en quantité sans unité refusé'
 );
 
+select throws_ok(
+  format('select public.update_item(%s, %L)', (pg_temp.item('Œufs')).id, '{"restock_threshold": 2}'),
+  '22023', '« Œufs » est suivi en niveau : utiliser restock_level', 'seuil en quantité sur un niveau refusé'
+);
+select throws_ok(
+  format('select public.update_item(%s, %L)', (pg_temp.item('Œufs')).id, '{"quantity": 3, "unit": "piece", "restock_level": "moitie"}'),
+  '22023', '« Œufs » est suivi en quantité : utiliser restock_threshold', 'seuil en niveau sur une quantité refusé'
+);
+
+-- ---------------------------------------------------------------------------
+-- idempotent_call
+-- ---------------------------------------------------------------------------
+
+insert into public.idempotent_call (idempotency_key, tool, response)
+values ('courses-0001', 'add_items', '{"created": []}');
+select throws_ok(
+  $$ insert into public.idempotent_call (idempotency_key, tool) values ('courses-0001', 'add_items') $$,
+  '23505', null, 'une clé par utilisateur'
+);
+
 -- ---------------------------------------------------------------------------
 -- Isolation : B ne touche pas aux articles de A
 -- ---------------------------------------------------------------------------
@@ -127,6 +147,9 @@ grant select on a_item to authenticated;
 select pg_temp.login('00000000-0000-0000-0000-00000000000b');
 
 select is((select count(*)::int from public.inventory_status), 0, 'B ne voit pas l''inventaire de A');
+select is((select count(*)::int from public.idempotent_call), 0, 'B ne voit pas les appels de A');
+insert into public.idempotent_call (idempotency_key, tool) values ('courses-0001', 'add_items');
+select pass('B peut réutiliser la même clé : unicité par utilisateur');
 select throws_ok(
   format('select public.restock_item(%s, 1, %L)', (select id from a_item), 'piece'),
   'P0002', null, 'B ne peut pas réapprovisionner un article de A'

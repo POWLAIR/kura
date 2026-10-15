@@ -51,8 +51,11 @@ describe("PurchaseItem", () => {
     expect(PurchaseItem.safeParse(input).success).toBe(false);
   });
 
-  it("borne la liste d'articles", () => {
+  it("borne la liste d'articles et la clé d'idempotence", () => {
+    const items = [{ name: "Sel", category: "epices" }];
     expect(AddItemsInput.safeParse({ items: [] }).success).toBe(false);
+    expect(AddItemsInput.safeParse({ items, idempotency_key: "courses-0001" }).success).toBe(true);
+    expect(AddItemsInput.safeParse({ items, idempotency_key: "court" }).success).toBe(false);
   });
 });
 

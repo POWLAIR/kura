@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { InventoryCategory, InventoryLocation, type QuantityUnit, StockLevel } from "./schemas.ts";
+import {
+  IdempotencyKey,
+  InventoryCategory,
+  InventoryLocation,
+  type QuantityUnit,
+  StockLevel,
+} from "./schemas.ts";
 
 type Category = z.infer<typeof InventoryCategory>;
 type Location = z.infer<typeof InventoryLocation>;
@@ -89,7 +95,11 @@ export type PurchaseItem = z.infer<typeof PurchaseItem>;
 
 export const AddItemsInput = z.object({
   items: z.array(PurchaseItem).min(1).max(50).describe("Articles achetés"),
+  idempotency_key: IdempotencyKey.optional().describe(
+    "Identifiant unique de cet enregistrement (ex. un UUID) : rejoué avec la même clé, l'appel renvoie le premier résultat sans rien réenregistrer",
+  ),
 });
+export type AddItemsInput = z.infer<typeof AddItemsInput>;
 
 export const ItemChanges = z
   .object({

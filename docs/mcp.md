@@ -69,11 +69,14 @@ Le réassort suit le mode de suivi de l'article :
 
 La réponse a trois listes, `created`, `restocked` et `ambiguous`. Chaque entrée ambiguë porte sa raison, une indication pour Claude (`hint`), et les candidats ou articles à proposer. Claude relance seulement ces articles avec la précision.
 
+**Idempotence** : `idempotency_key` (optionnelle, 8 à 128 caractères) est réservée dans la table `idempotent_call`, dans la même transaction que les écritures. Un appel rejoué avec la même clé, par exemple après un timeout, renvoie la réponse enregistrée avec `replayed: true` et ne réécrit rien. Si l'appel échoue, la clé est libérée avec le reste.
+
 ### `update_item`
 
 - Seuls les champs donnés changent ; `null` efface une date, un seuil ou l'aliment.
 - Passer de la quantité au niveau, ou l'inverse, efface l'ancien suivi et son seuil.
 - Une correction de stock dans la même unité, ou d'un niveau à l'autre, est tracée en `stock_movement` « manuel ».
+- Un changement d'unité ou de mode de suivi est signalé dans la réponse (`notice`), puisqu'il efface le seuil et n'écrit pas de mouvement. Un seuil incompatible avec le mode (seuil en quantité sur un article suivi en niveau) est refusé avec un message en français.
 
 ### Liste « À racheter »
 

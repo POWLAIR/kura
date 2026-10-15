@@ -138,6 +138,29 @@ Deno.test({
         assertEquals(all.data.items.length, 3);
       });
 
+      await t.step("add_items rejoué avec la même clé : rien n'est réenregistré", async () => {
+        const args = {
+          items: [{ name: `Œufs ${tag}`, category: "frais", quantity: 6, unit: "piece" }],
+          idempotency_key: `courses-${tag}`,
+        };
+        const first = await call("add_items", args);
+        const replay = await call("add_items", args);
+        assertEquals(first.data.restocked[0].quantity, 18);
+        assertEquals(replay.data.replayed, true);
+        assertEquals(replay.data.restocked, first.data.restocked);
+        const [row] = await sql`select quantity from public.inventory_item where id = ${eggs}`;
+        assertEquals(row?.quantity, 18);
+      });
+
+      await t.step("update_item signale un changement d'unité", async () => {
+        const { data } = await call("update_item", {
+          item_id: eggs,
+          changes: { quantity: 600, unit: "g" },
+        });
+        assertEquals(data.notice.startsWith("Suivi changé de « piece » à « g »"), true);
+        assertEquals(data.updated.restock_threshold, undefined);
+      });
+
       await t.step("erreurs de saisie renvoyées à Claude, pas en 500", async () => {
         const [theirs] = await sql<{ id: number }[]>`
           select id from public.inventory_item where user_id = ${other}`;

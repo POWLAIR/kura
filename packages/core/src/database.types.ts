@@ -79,6 +79,20 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"idempotent_call": {
+                  Row: {
+                    "created_at": string,"id": number,"idempotency_key": string,"response": Json | null,"tool": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: never,"idempotency_key": string,"response"?: Json | null,"tool": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: never,"idempotency_key"?: string,"response"?: Json | null,"tool"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"inventory_item": {
                   Row: {
                     "category": Database["public"]['Enums']["inventory_category"],"created_at": string,"expires_on": string | null,"food_ref_id": number | null,"id": number,"level": Database["public"]['Enums']["stock_level"] | null,"location": Database["public"]['Enums']["inventory_location"],"name": string,"quantity": number | null,"restock_level": Database["public"]['Enums']["stock_level"] | null,"restock_threshold": number | null,"unit": Database["public"]['Enums']["quantity_unit"] | null,"updated_at": string,"user_id": string
