@@ -6,8 +6,10 @@ Mise en ligne de Kura sur Supabase, en région UE, puis branchement de Claude su
 
 1. Sur [supabase.com/dashboard](https://supabase.com/dashboard), crée un projet avec ces réglages :
    - nom : `kura` ;
-   - région : **West EU (Paris)**, ou à défaut Central EU (Frankfurt) ;
-   - mot de passe de base : un mot de passe généré, gardé dans ton gestionnaire.
+   - région : via le lien « Need a specific region? », **West EU (Paris)** ou à défaut Central EU (Frankfurt). Le choix générique « Europe » laisse Supabase décider et peut tomber hors UE (Londres, Zurich) ; la région ne se change plus ensuite ;
+   - GitHub : **ne pas connecter le dépôt**. L'intégration déploierait les migrations à chaque push, alors que `db push` se lance à la main ;
+   - sécurité : laisser cochées *Enable Data API* (l'app Expo en aura besoin), *Automatically expose new tables* et *Enable automatic RLS*. Nos migrations ne contiennent aucun `grant` sur les tables : `authenticated` tient ses droits des droits par défaut, et chaque migration retire ceux d'`anon`. Décocher *Automatically expose new tables* couperait tout accès ;
+   - mot de passe de base : un mot de passe généré, gardé dans ton gestionnaire (`supabase link` et `db push` le demandent).
 2. Dans **Authentication → Sign In / Providers**, désactive **Allow new users to sign up**. En usage solo, seul ton compte existe.
 3. Dans **Authentication → Users → Add user**, crée ton compte (email, mot de passe, *Auto Confirm User*).
 4. Note la **référence du projet** (`Project Settings → General`, une vingtaine de lettres). Note aussi la **clé secrète** (`Project Settings → API Keys`, `sb_secret_…`).
