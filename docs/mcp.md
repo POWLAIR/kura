@@ -97,7 +97,7 @@ Une saisie refusée par la base (article introuvable, unité incompatible…) re
 
 **Règles communes :**
 - **Entrées** : schémas Zod et logique pure dans `packages/core/src/tracking.ts`.
-- **Idempotence** : chaque `log_*` exige une `idempotency_key`. Rejoué, il renvoie l'enregistrement existant (`replayed: true`) grâce aux contraintes `unique (user_id, idempotency_key)` de `meal`, `workout` et `body_measure`.
+- **Idempotence** : chaque `log_*` exige une `idempotency_key`. Rejoué, il renvoie l'enregistrement existant (`replayed: true`) grâce aux contraintes `unique (user_id, idempotency_key)` de `meal`, `workout` et `body_measure`. Le contenu d'un rejeu est ignoré : pour corriger un enregistrement, il faut une nouvelle clé.
 - **Dates** : elles sont en ISO avec fuseau, et valent maintenant par défaut. Les journées sont découpées à l'heure de Paris (`TIMEZONE`).
 
 ### `log_meal` : totaux depuis `food_ref`, jamais par Claude

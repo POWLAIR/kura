@@ -6,6 +6,7 @@ import {
   LogWeightInput,
   LogWorkoutInput,
   localDate,
+  type MealItemAmbiguity,
   type MealNutrition,
   NutritionTotals,
   periodRange,
@@ -24,6 +25,12 @@ import { compact, ok, userErrors } from "./result.ts";
 // Totaux nutritionnels calculés en SQL depuis food_ref (public.log_meal), jamais par Claude.
 // Chaque log_* exige une clé d'idempotence : rejoué, il renvoie l'enregistrement existant.
 // Les journées sont découpées à l'heure de Paris (TIMEZONE).
+
+const MEAL_HINTS: Record<MealItemAmbiguity["reason"], string> = {
+  food: "Choisir food_ref_id parmi candidates, ou food_ref_id null si aucun ne correspond.",
+  unknown_food:
+    "food_ref_id inconnu : relancer cet aliment sans food_ref_id pour obtenir des candidats.",
+};
 
 const NEUTRAL =
   "Présenter les chiffres tels quels : aucun commentaire sur le poids, les quantités mangées ou les calories, aucun objectif.";
@@ -85,10 +92,11 @@ async function logMeal(tx: Tx, input: LogMealInput) {
   if (ambiguous.length > 0) {
     return {
       logged: false,
-      hint: "Rien n'est enregistré. Relancer tout le repas avec food_ref_id choisi parmi les candidats pour ces aliments, ou food_ref_id null si aucun ne correspond.",
+      hint: "Rien n'est enregistré : relancer tout le repas avec la précision demandée pour ces aliments.",
       ambiguous: ambiguous.map((a) => ({
         name: a.name,
         reason: a.reason,
+        hint: MEAL_HINTS[a.reason],
         candidates: a.candidates.map((f) => ({ food_ref_id: f.id, name: f.name })),
       })),
     };

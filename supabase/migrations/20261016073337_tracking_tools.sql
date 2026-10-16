@@ -164,5 +164,10 @@ begin
 end;
 $$;
 
+-- Réservées aux utilisateurs connectés (EXECUTE est accordé à public par défaut).
+revoke all on function public.to_grams(numeric, public.quantity_unit, numeric) from public, anon;
+grant execute on function public.to_grams(numeric, public.quantity_unit, numeric) to authenticated;
+revoke all on function public.meal_totals(bigint) from public, anon;
+grant execute on function public.meal_totals(bigint) to authenticated;
 revoke all on function public.log_meal(text, jsonb, text, timestamptz) from public, anon;
 grant execute on function public.log_meal(text, jsonb, text, timestamptz) to authenticated;
