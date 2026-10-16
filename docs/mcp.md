@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`) qui expose les tools de la conception (section « Serveur MCP ») à Claude. Les tools d'inventaire sont décrits plus bas ; ceux du suivi (repas, sport, poids) arrivent avec #8.
+Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`) qui expose les tools de la conception (section « Serveur MCP ») à Claude. Les tools d'inventaire et de suivi sont décrits plus bas. À la connexion, le serveur envoie aussi à Claude des instructions communes (`server.ts`) : ne jamais estimer de valeur nutritionnelle, relancer sur les ambiguïtés, une clé d'idempotence par enregistrement, rester neutre.
 
 ## Transport
 
@@ -86,6 +86,50 @@ Un article y figure quand sa quantité est au seuil de rachat ou en dessous, ou 
 
 Une saisie refusée par la base (article introuvable, unité incompatible…) revient à Claude comme erreur du tool, avec le message français de la fonction SQL. Une autre erreur donne un `500`, avec seulement le code dans les logs.
 
+## Tools de suivi
+
+| Tool | Rôle |
+|---|---|
+| `log_meal` | Repas hors recette : libellé, aliments et quantités dites |
+| `log_workout` | Séance : type, durée, intensité ressentie de 1 à 5 |
+| `log_weight` | Pesée en kg |
+| `get_summary` | Résumé d'un jour ou d'une semaine (lundi-dimanche) |
+
+**Règles communes :**
+- **Entrées** : schémas Zod et logique pure dans `packages/core/src/tracking.ts`.
+- **Idempotence** : chaque `log_*` exige une `idempotency_key`. Rejoué, il renvoie l'enregistrement existant (`replayed: true`) grâce aux contraintes `unique (user_id, idempotency_key)` de `meal`, `workout` et `body_measure`.
+- **Dates** : elles sont en ISO avec fuseau, et valent maintenant par défaut. Les journées sont découpées à l'heure de Paris (`TIMEZONE`).
+
+### `log_meal` : totaux depuis `food_ref`, jamais par Claude
+
+1. Chaque aliment est rattaché à `food_ref` :
+   - par `food_ref_id` choisi ;
+   - par `null` quand aucun aliment de référence ne correspond, l'aliment est alors gardé par son nom ;
+   - ou par le rapprochement prudent de l'inventaire.
+
+   Si un seul aliment est ambigu, rien n'est enregistré : la réponse (`logged: false`) liste les candidats, et Claude relance tout le repas.
+2. La fonction SQL `log_meal` enregistre le repas et ses aliments, avec la quantité dite (`quantity`, `unit`) et sa conversion en grammes (`to_grams`) :
+   - grammes : tels quels ;
+   - pièces : seulement avec le poids moyen de `food_ref` (`piece_weight_g`) ;
+   - ml : jamais, faute de densité.
+3. `meal_totals` calcule les totaux pour toutes les clés (colonnes principales, `micronutrients`, `nutrient_details`), sur les aliments convertis en grammes : `{ "values": {…}, "incomplete": [clés] }`.
+   - Une clé absente de tous les aliments est « non renseignée ».
+   - Une clé absente de certains aliments seulement est dans `incomplete` : son total est un minimum.
+4. `meal.partial_values` vaut vrai dès qu'un aliment n'a pas de référence ou n'a pas pu être converti en grammes.
+
+> **Limite actuelle** : Ciqual ne fournit ni poids moyen par pièce ni densité. « 2 œufs » ou « 15 ml de sauce soja » rendent donc le repas partiel, plutôt que d'inventer un poids. Pour avoir des totaux complets, il faut donner les grammes quand on les connaît. La quantité dite est gardée pour recalculer le jour où ces données existeront.
+
+### `get_summary`
+
+Le résumé contient :
+- les totaux des colonnes principales, avec `incomplete` et `partial_values` ;
+- les repas, les séances et les minutes de sport ;
+- selon la période :
+  - pour un jour : les pesées du jour ;
+  - pour une semaine : un résumé par jour et le poids moyen, plutôt qu'au jour le jour.
+
+Il n'y a aucun objectif ni jugement, et les descriptions des tools rappellent à Claude de rester neutre sur le poids, les quantités et les calories.
+
 ## Logs
 
 Les logs ne contiennent que des événements, des identifiants et des codes d'erreur (`log.ts`), jamais de contenu ni de message d'erreur Postgres, qui peut contenir des valeurs. Événements actuels :
@@ -115,6 +159,7 @@ Pour Claude Code, `.mcp.json` déclare le serveur `kura-local`, avec la clé lue
 - **Avec base** :
   - `db_test.ts` vérifie que `asUser` applique la RLS et que les clés révoquées sont refusées ;
   - `tools/inventory_test.ts` déroule les tools d'inventaire de bout en bout avec le client MCP officiel.
+  - `tools/tracking_test.ts` déroule les tools de suivi : ambiguïté sans enregistrement, totaux et valeurs partielles, rejeux sans doublon, journées à l'heure de Paris, aucune donnée dans les logs.
 
   La CI les lance contre sa base ; en local, il suffit de définir `KURA_TEST_DB_URL` :
 

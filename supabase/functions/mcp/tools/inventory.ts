@@ -12,20 +12,17 @@ import {
   toStockChanges,
   UpdateItemInput,
 } from "@kura/core";
-import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type postgres from "postgres";
 import type { Tx } from "../db.ts";
 import type { UserDb } from "../server.ts";
+import { compact, fail, InputError, ok, userErrors } from "./result.ts";
 
 // Tools d'inventaire (issue #6) : get_inventory, add_items, update_item, get_shopping_list.
 // Décisions dans @kura/core (planPurchase), écritures par les fonctions SQL add_item,
 // restock_item et update_item, dans la transaction de l'utilisateur (RLS).
 
 type Status = Tables<"inventory_status">;
-
-// Erreurs SQL attendues (saisie refusée, article introuvable…) : renvoyées à Claude telles
-// quelles. Les autres remontent au handler (500, code loggé).
-const USER_ERRORS = new Set(["22023", "22P02", "23503", "23514", "P0002"]);
 
 const AMBIGUITY_HINTS: Record<AmbiguityReason, string> = {
   food: "Aliment de référence à choisir : relancer avec food_ref_id parmi candidates, ou food_ref_id null si aucun ne correspond. Si c'est un article déjà en stock (items), relancer avec item_id.",
@@ -36,30 +33,6 @@ const AMBIGUITY_HINTS: Record<AmbiguityReason, string> = {
   unknown_item: "item_id inconnu : voir get_inventory.",
   unknown_food: "food_ref_id inconnu : reprendre un id parmi les candidats proposés.",
 };
-
-function ok(data: unknown): CallToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(data) }] };
-}
-
-function fail(message: string): CallToolResult {
-  return { isError: true, content: [{ type: "text", text: message }] };
-}
-
-// Saisie refusée côté TypeScript, renvoyée à Claude comme les erreurs SQL attendues.
-class InputError extends Error {}
-
-async function userErrors(run: () => Promise<CallToolResult>): Promise<CallToolResult> {
-  try {
-    return await run();
-  } catch (error) {
-    if (error instanceof InputError) return fail(error.message);
-    const code = (error as { code?: unknown }).code;
-    if (typeof code === "string" && USER_ERRORS.has(code) && error instanceof Error) {
-      return fail(error.message);
-    }
-    throw error;
-  }
-}
 
 // Vue compacte d'un article : les champs vides sont omis.
 function itemView(row: Status) {
@@ -77,7 +50,7 @@ function itemView(row: Status) {
     low_stock: row.low_stock || undefined,
     food: row.food_ref_id ? { id: row.food_ref_id, name: row.food_name } : undefined,
   };
-  return Object.fromEntries(Object.entries(view).filter(([, v]) => v !== null && v !== undefined));
+  return compact(view);
 }
 
 function lineView(line: InventoryLine) {

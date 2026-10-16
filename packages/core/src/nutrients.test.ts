@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MICRONUTRIENTS, Micronutrients, NUTRIENT_DETAILS, NutrientDetails } from "./nutrients.ts";
+import {
+  MAIN_NUTRIENTS,
+  MICRONUTRIENTS,
+  Micronutrients,
+  NUTRIENT_DETAILS,
+  NutrientDetails,
+} from "./nutrients.ts";
 
 const SUFFIX = { g: "_g", mg: "_mg", µg: "_ug" } as const;
 const MAIN_COLUMNS = ["carbs_g", "sugars_g", "fat_g", "saturated_fat_g"];
@@ -15,9 +21,9 @@ describe.each([
   });
 });
 
-it("aucune clé n'est partagée entre micronutrients et nutrient_details", () => {
-  const micro = new Set<string>(MICRONUTRIENTS.map((m) => m.key));
-  expect(NUTRIENT_DETAILS.filter((d) => micro.has(d.key))).toEqual([]);
+it("aucune clé n'est partagée entre colonnes principales, micronutrients et nutrient_details", () => {
+  const keys = [...MAIN_NUTRIENTS, ...MICRONUTRIENTS, ...NUTRIENT_DETAILS].map((n) => n.key);
+  expect(new Set(keys).size).toBe(keys.length);
 });
 
 it("chaque détail se rattache à une colonne principale ou à un autre détail", () => {
