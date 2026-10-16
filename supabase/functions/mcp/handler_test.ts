@@ -98,6 +98,10 @@ for (const [era, negotiation] of Object.entries({
       "add_items",
       "get_inventory",
       "get_shopping_list",
+      "get_summary",
+      "log_meal",
+      "log_weight",
+      "log_workout",
       "update_item",
     ]);
     assertEquals(builtFor.at(-1), { keyId: 7, userId: "user-a" });

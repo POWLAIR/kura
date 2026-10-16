@@ -135,14 +135,14 @@ isOneToOne: false
                   ]
                 },"meal_item": {
                   Row: {
-                    "created_at": string,"food_ref_id": number,"id": number,"meal_id": number,"quantity_g": number | null,"user_id": string
+                    "created_at": string,"food_ref_id": number | null,"id": number,"meal_id": number,"name": string | null,"quantity": number | null,"quantity_g": number | null,"unit": Database["public"]['Enums']["quantity_unit"] | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"food_ref_id": number,"id"?: never,"meal_id": number,"quantity_g"?: number | null,"user_id"?: string
+                    "created_at"?: string,"food_ref_id"?: number | null,"id"?: never,"meal_id": number,"name"?: string | null,"quantity"?: number | null,"quantity_g"?: number | null,"unit"?: Database["public"]['Enums']["quantity_unit"] | null,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"food_ref_id"?: number,"id"?: never,"meal_id"?: number,"quantity_g"?: number | null,"user_id"?: string
+                    "created_at"?: string,"food_ref_id"?: number | null,"id"?: never,"meal_id"?: number,"name"?: string | null,"quantity"?: number | null,"quantity_g"?: number | null,"unit"?: Database["public"]['Enums']["quantity_unit"] | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -268,11 +268,22 @@ isOneToOne: false
             "add_item":
 { Args: { "p_category": Database["public"]['Enums']["inventory_category"],"p_expires_on"?: string,"p_food_ref_id"?: number,"p_location": Database["public"]['Enums']["inventory_location"],"p_name": string,"p_quantity"?: number,"p_unit"?: Database["public"]['Enums']["quantity_unit"] }; Returns: number
                            },
+"log_meal":
+{ Args: { "p_eaten_at"?: string,"p_idempotency_key": string,"p_items": Json,"p_label": string }; Returns: {
+              "meal_id": number,"replayed": boolean
+            }[]
+                           },
+"meal_totals":
+{ Args: { "p_meal_id": number }; Returns: Json
+                           },
 "restock_item":
 { Args: { "p_expires_on"?: string,"p_item_id": number,"p_quantity"?: number,"p_unit"?: Database["public"]['Enums']["quantity_unit"] }; Returns: undefined
                            },
 "stock_level_fraction":
 { Args: { "level": Database["public"]['Enums']["stock_level"] }; Returns: number
+                           },
+"to_grams":
+{ Args: { "p_piece_weight_g": number,"p_quantity": number,"p_unit": Database["public"]['Enums']["quantity_unit"] }; Returns: number
                            },
 "update_item":
 { Args: { "p_changes": Json,"p_item_id": number }; Returns: undefined

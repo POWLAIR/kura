@@ -13,6 +13,20 @@ function keySchema<const T extends readonly NutrientDef[]>(defs: T) {
   return { key, values: z.partialRecord(key, z.number().nonnegative()) };
 }
 
+// Colonnes principales de food_ref, toujours visibles (docs/conception.md, « Affichage
+// nutritionnel »), dans l'ordre d'affichage.
+export const MAIN_NUTRIENTS = [
+  { key: "energy_kcal", label: "Énergie", unit: "kcal" },
+  { key: "protein_g", label: "Protéines", unit: "g" },
+  { key: "carbs_g", label: "Glucides", unit: "g" },
+  { key: "sugars_g", label: "dont sucres", unit: "g" },
+  { key: "fat_g", label: "Lipides", unit: "g" },
+  { key: "saturated_fat_g", label: "dont acides gras saturés", unit: "g" },
+  { key: "fiber_g", label: "Fibres", unit: "g" },
+  { key: "salt_g", label: "Sel", unit: "g" },
+] as const;
+export type MainNutrientKey = (typeof MAIN_NUTRIENTS)[number]["key"];
+
 // food_ref.micronutrients : vitamines et minéraux.
 // Ordre d'affichage : les plus courants d'abord (docs/conception.md, « Affichage nutritionnel »).
 export const MICRONUTRIENTS = [
