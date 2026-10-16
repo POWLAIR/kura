@@ -8,10 +8,16 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { type Database, STOCK_LEVEL_FRACTION } from "@kura/core";
+import {
+  type Database,
+  type Food,
+  type FoodChoices,
+  type FoodMatch,
+  matchFoods,
+  STOCK_LEVEL_FRACTION,
+} from "@kura/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { type Food, type FoodChoices, type FoodMatch, matchFoods } from "./food-match";
 import {
   type InventoryDraft,
   type NotionBlock,

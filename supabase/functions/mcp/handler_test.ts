@@ -94,7 +94,12 @@ for (const [era, negotiation] of Object.entries({
     const { client, connected } = connect(`Bearer ${key}`, negotiation);
     await connected;
     assertEquals(client.getServerVersion()?.name, SERVER_INFO.name);
-    assertEquals((await client.listTools()).tools, []);
+    assertEquals((await client.listTools()).tools.map((t) => t.name).sort(), [
+      "add_items",
+      "get_inventory",
+      "get_shopping_list",
+      "update_item",
+    ]);
     assertEquals(builtFor.at(-1), { keyId: 7, userId: "user-a" });
     await client.close();
   });

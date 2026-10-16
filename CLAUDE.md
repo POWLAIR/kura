@@ -8,7 +8,7 @@ Outil personnel qui relie inventaire de cuisine, recettes, suivi alimentation/sp
 
 ```
 apps/mobile/          App Expo (phase 2, pas encore créée)
-packages/core/        Schémas Zod + logique métier partagés app ↔ MCP (clés micronutriments : nutrients.ts)
+packages/core/        Schémas Zod + logique métier partagés app ↔ MCP (nutrients.ts, food-match.ts, purchase.ts)
 scripts/              Imports ponctuels exécutés en local (Ciqual, Notion)
 supabase/migrations/  Schéma Postgres, RLS, fonctions RPC (cook_recipe…)
 supabase/functions/   Edge Functions Deno : mcp (voir docs/mcp.md), recipes, notion-export…

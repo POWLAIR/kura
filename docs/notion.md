@@ -51,7 +51,7 @@ Pour corriger une déduction, ajoute l'indication dans Notion (par exemple « Pe
 
 ## Rapprochement avec Ciqual
 
-Un lien faux donnerait des valeurs nutritionnelles fausses. Le rapprochement automatique est donc prudent : il ne lie un article que si un seul aliment correspond, sans tenir compte des accents ni du pluriel. L'aliment doit avoir exactement le même nom (« Moutarde »), ou être le seul de ce nom avant la virgule (« Cannelle » donne « Cannelle, poudre »).
+Un lien faux donnerait des valeurs nutritionnelles fausses. Le rapprochement automatique est donc prudent : il ne lie un article que si un seul aliment correspond, sans tenir compte des accents ni du pluriel. L'aliment doit avoir exactement le même nom (« Moutarde »), ou être le seul de ce nom avant la virgule sans variante qui commence par ce nom (« Cannelle » donne « Cannelle, poudre », mais « Riz » reste ambigu : riz blanc, thaï, complet…). La règle vit dans `packages/core/src/food-match.ts`, partagée avec le serveur MCP.
 
 Sinon, l'article est importé avec `food_ref_id = null` et listé en fin de rapport avec les trois candidats les plus proches.
 

@@ -1,6 +1,11 @@
-import type { InventoryCategory, InventoryLocation, QuantityUnit, StockLevel } from "@kura/core";
+import {
+  fold,
+  type InventoryCategory,
+  type InventoryLocation,
+  type QuantityUnit,
+  type StockLevel,
+} from "@kura/core";
 import { z } from "zod";
-import { fold } from "./text";
 
 // Lecture de la page Notion « Inventaire des ingrédients » : des titres de section
 // suivis de listes à puces, une puce par article. Règles documentées dans docs/notion.md.
