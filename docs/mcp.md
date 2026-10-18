@@ -11,7 +11,8 @@ Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`
 
 ## Authentification par clé API (phase 1)
 
-- **En-tête** : la clé est envoyée dans `Authorization: Bearer kura_…`. Elle fait 43 caractères aléatoires (32 octets) après le préfixe.
+- **En-tête** : la clé est envoyée dans `Authorization: Bearer kura_…` (Claude Code). Elle peut aussi l'être dans un en-tête `X-…`, pour les clients qui n'offrent qu'une liste fixe, comme le connecteur claude.ai : `X-API-Key`, `X-Auth-Token`, `X-Auth-API-Key`, `X-Auth-Key`, `X-API-Token`, `X-Access-Token` ou `API-Key`. La valeur est alors la clé seule, avec ou sans `Bearer` devant (`API_KEY_HEADERS` dans `packages/core/src/api-key.ts`).
+- **Format** : la clé fait 43 caractères aléatoires (32 octets) après le préfixe `kura_`. Ce format est vérifié quel que soit l'en-tête.
 - **Stockage** : la table `api_key` ne garde que le hash SHA-256 de la clé, et son début (`key_prefix`) pour la reconnaître. La clé en clair n'est affichée qu'une fois, à la création. Elle n'est jamais stockée ni loggée.
 - **Droits d'une session** : une session (app ou tools MCP) peut créer, lire, révoquer et supprimer ses clés. Elle ne peut ni réactiver une clé révoquée, ni réécrire son hash.
 - **Refus** : une clé absente, mal formée, inconnue ou révoquée reçoit un `401` avec `WWW-Authenticate: Bearer error="invalid_token"`. Si la base ne répond pas, le serveur renvoie un `503` : le client réessaie au lieu de croire sa clé révoquée.

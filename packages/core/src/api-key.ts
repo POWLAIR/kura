@@ -30,3 +30,29 @@ export function apiKeyFromHeader(header: string | null): string | null {
   const key = /^Bearer\s+(\S+)$/i.exec(header?.trim() ?? "")?.[1];
   return key && isApiKey(key) ? key : null;
 }
+
+// En-têtes de clé API proposés par les clients qui n'envoient pas Authorization (le
+// formulaire de connecteur claude.ai n'offre qu'une liste fixe d'en-têtes X-…).
+export const API_KEY_HEADERS = [
+  "x-api-key",
+  "x-auth-token",
+  "x-auth-api-key",
+  "x-auth-key",
+  "x-api-token",
+  "x-access-token",
+  "api-key",
+] as const;
+
+// Clé lue dans Authorization (Bearer), sinon dans l'un des en-têtes X-… (clé seule ou
+// précédée de Bearer). Le format est vérifié dans tous les cas.
+export function apiKeyFromHeaders(headers: { get(name: string): string | null }): string | null {
+  const bearer = apiKeyFromHeader(headers.get("authorization"));
+  if (bearer) return bearer;
+  for (const name of API_KEY_HEADERS) {
+    const value = headers.get(name)?.trim();
+    if (!value) continue;
+    const key = value.replace(/^Bearer\s+/i, "");
+    if (isApiKey(key)) return key;
+  }
+  return null;
+}

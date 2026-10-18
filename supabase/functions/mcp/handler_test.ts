@@ -61,6 +61,12 @@ for (const [name, headers] of Object.entries<Record<string, string>>({
   });
 }
 
+Deno.test("clé dans X-API-Key (connecteur claude.ai) : acceptée", async () => {
+  const res = await post({ "x-api-key": key });
+  assertEquals(res.status, 200);
+  await res.body?.cancel();
+});
+
 Deno.test("503 sans challenge quand la base ne répond pas : la clé n'est pas mise en cause", async () => {
   const down = createHandler({
     findCaller: () =>

@@ -1,4 +1,4 @@
-import { apiKeyFromHeader, hashApiKey } from "@kura/core";
+import { apiKeyFromHeaders, hashApiKey } from "@kura/core";
 import {
   type AuthInfo,
   bearerAuthChallengeResponse,
@@ -17,7 +17,8 @@ export type HandlerDeps = {
   buildServer: (caller: Caller) => McpServer;
 };
 
-// Streamable HTTP sans état : clé API en « Authorization: Bearer kura_… », vérifiée
+// Streamable HTTP sans état : clé API en « Authorization: Bearer kura_… » ou dans un en-tête
+// X-API-Key (et apparentés, pour le connecteur claude.ai), vérifiée
 // par son hash avant tout traitement MCP. Voir docs/mcp.md.
 export function createHandler({ findCaller, buildServer }: HandlerDeps) {
   const mcp = createMcpHandler(({ authInfo }) => buildServer(callerOf(authInfo)), {
@@ -29,7 +30,7 @@ export function createHandler({ findCaller, buildServer }: HandlerDeps) {
     const rejected = originValidationResponse(request, localhostAllowedOrigins());
     if (rejected) return rejected;
 
-    const key = apiKeyFromHeader(request.headers.get("authorization"));
+    const key = apiKeyFromHeaders(request.headers);
     let caller: Caller | null = null;
     try {
       caller = key ? await findCaller(await hashApiKey(key)) : null;

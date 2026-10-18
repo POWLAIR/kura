@@ -66,11 +66,11 @@ Dans claude.ai, va dans **Paramètres → Connecteurs → Ajouter un connecteur 
 
 - nom : `Kura` ;
 - URL : `https://<ref>.supabase.co/functions/v1/mcp` ;
-- en-tête de requête : `Authorization` = `Bearer kura_…` (la clé de l'étape 3).
+- en-tête de requête : le formulaire n'offre pas `Authorization`, mais une liste d'en-têtes `X-…`. Choisis `X-API-Key` (ou `X-Auth-Token`, `X-Auth-API-Key`… : le serveur les accepte tous). La valeur est **la clé seule**, `kura_…`, sans `Bearer`, sans espace ni retour à la ligne.
 
 Un connecteur ajouté sur le web est aussi disponible dans les apps Claude iOS et Android. Active-le dans une conversation avec le menu des outils.
 
-**Si le formulaire n'a pas de champ d'en-tête** : il ne propose alors qu'OAuth. Le serveur n'accepte que la clé en en-tête, et il ne faut pas la mettre dans l'URL, où elle finirait dans les logs. La solution prévue est d'avancer l'OAuth de Supabase Auth, prévu en phase 3 (conception, « Serveur MCP »). En attendant, le serveur reste utilisable depuis Claude Code.
+Ne mets jamais la clé dans l'URL : elle finirait dans les logs. Si un jour le formulaire n'offrait plus aucun en-tête, la solution serait d'avancer l'OAuth de Supabase Auth, prévu en phase 3.
 
 **Claude Code**, avec une clé à part, révocable séparément :
 
