@@ -52,6 +52,8 @@ create policy "food_conversion : suppression de ses lignes" on public.food_conve
 drop function public.to_grams(numeric, public.quantity_unit, numeric);
 
 -- Pièce : poids moyen ; ml : densité. Valeur inconnue : null, le repas est partiel.
+-- Tout appelant passe d'abord par food_conversion, comme log_meal : cook_recipe (phase 3)
+-- devra faire de même, sans quoi un aliment serait converti différemment selon la voie.
 create function public.to_grams(
   p_quantity numeric,
   p_unit public.quantity_unit,
