@@ -30,3 +30,39 @@ export function apiKeyFromHeader(header: string | null): string | null {
   const key = /^Bearer\s+(\S+)$/i.exec(header?.trim() ?? "")?.[1];
   return key && isApiKey(key) ? key : null;
 }
+
+type HeaderBag = {
+  get(name: string): string | null;
+  forEach(callback: (value: string, name: string) => void): void;
+};
+
+// Valeur d'en-tête → clé, qu'elle soit seule ou précédée de « Bearer ».
+function keyFromValue(value: string): string | null {
+  const key = value.trim().replace(/^Bearer\s+/i, "");
+  return isApiKey(key) ? key : null;
+}
+
+// Clé lue dans Authorization, sinon dans n'importe quel en-tête dont la valeur a le format
+// d'une clé : les clients n'imposent pas tous le même nom (le connecteur claude.ai n'offre
+// qu'une liste fixe d'en-têtes X-…). Le nom ne compte pas, la clé est vérifiée par son hash.
+export function apiKeyFromHeaders(headers: HeaderBag): string | null {
+  const bearer = apiKeyFromHeader(headers.get("authorization"));
+  if (bearer) return bearer;
+  let found: string | null = null;
+  headers.forEach((value) => {
+    found ??= keyFromValue(value);
+  });
+  return found;
+}
+
+// Pour les logs d'un refus : nom des en-têtes d'authentification reçus, avec seulement la
+// longueur de leur valeur et si elle commence par « kura_ ». Jamais la valeur elle-même.
+export function describeCredentialHeaders(headers: HeaderBag): string {
+  const seen: string[] = [];
+  headers.forEach((value, name) => {
+    if (!/auth|key|token/i.test(name)) return;
+    const bare = value.trim().replace(/^Bearer\s+/i, "");
+    seen.push(`${name}(${bare.length}${bare.startsWith("kura_") ? ",kura" : ""})`);
+  });
+  return seen.join(" ") || "aucun";
+}

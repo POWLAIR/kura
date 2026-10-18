@@ -13,7 +13,7 @@ scripts/              Imports ponctuels exécutés en local (Ciqual, Notion)
 supabase/migrations/  Schéma Postgres, RLS, fonctions RPC (cook_recipe…)
 supabase/functions/   Edge Functions Deno : mcp (voir docs/mcp.md), recipes, notion-export…
 supabase/tests/       Tests pgTAP (SQL + RLS)
-docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP)
+docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP ; deploiement.md)
 ```
 
 ## Commandes
@@ -32,6 +32,7 @@ pnpm exec supabase test db                 # tests pgTAP
 pnpm functions:test                        # tests Deno des Edge Functions (inclus dans pnpm check)
 pnpm mcp:key --user <email>                # clé API du serveur MCP (affichée une fois)
 pnpm exec supabase functions serve <nom>   # Edge Function en local
+KURA_ENV_FILE=.env.production pnpm <script>  # scripts contre la base déployée (voir docs/deploiement.md)
 ```
 
 ## Règles non négociables
