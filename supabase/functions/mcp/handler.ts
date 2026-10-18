@@ -1,4 +1,4 @@
-import { apiKeyFromHeaders, hashApiKey } from "@kura/core";
+import { apiKeyFromHeaders, describeCredentialHeaders, hashApiKey } from "@kura/core";
 import {
   type AuthInfo,
   bearerAuthChallengeResponse,
@@ -17,9 +17,9 @@ export type HandlerDeps = {
   buildServer: (caller: Caller) => McpServer;
 };
 
-// Streamable HTTP sans état : clé API en « Authorization: Bearer kura_… » ou dans un en-tête
-// X-API-Key (et apparentés, pour le connecteur claude.ai), vérifiée
-// par son hash avant tout traitement MCP. Voir docs/mcp.md.
+// Streamable HTTP sans état : clé API en « Authorization: Bearer kura_… », ou dans n'importe
+// quel en-tête (connecteur claude.ai), vérifiée par son hash avant tout traitement MCP.
+// Voir docs/mcp.md.
 export function createHandler({ findCaller, buildServer }: HandlerDeps) {
   const mcp = createMcpHandler(({ authInfo }) => buildServer(callerOf(authInfo)), {
     onerror: (error) => log("mcp_error", { code: errorCode(error) }),
@@ -40,7 +40,11 @@ export function createHandler({ findCaller, buildServer }: HandlerDeps) {
       return new Response(null, { status: 503, headers: { "retry-after": "5" } });
     }
     if (!caller) {
-      log("auth_refused", { reason: key ? "unknown_or_revoked" : "missing_or_malformed" });
+      log("auth_refused", {
+        reason: key ? "unknown_or_revoked" : "missing_or_malformed",
+        // Noms d'en-têtes et longueurs seulement : de quoi diagnostiquer un client mal réglé.
+        headers: describeCredentialHeaders(request.headers),
+      });
       // En-tête WWW-Authenticate : ASCII uniquement, d'où l'absence d'accents.
       return bearerAuthChallengeResponse(
         new OAuthError(OAuthErrorCode.InvalidToken, "Cle API absente, invalide ou revoquee"),

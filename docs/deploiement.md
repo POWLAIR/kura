@@ -66,7 +66,7 @@ Dans claude.ai, va dans **Paramètres → Connecteurs → Ajouter un connecteur 
 
 - nom : `Kura` ;
 - URL : `https://<ref>.supabase.co/functions/v1/mcp` ;
-- en-tête de requête : le formulaire n'offre pas `Authorization`, mais une liste d'en-têtes `X-…`. Choisis `X-API-Key` (ou `X-Auth-Token`, `X-Auth-API-Key`… : le serveur les accepte tous). La valeur est **la clé seule**, `kura_…`, sans `Bearer`, sans espace ni retour à la ligne.
+- en-tête de requête : le formulaire n'offre pas `Authorization`, mais une liste d'en-têtes `X-…`. Choisis-en un, de préférence `X-API-Key` : le serveur lit la clé quel que soit le nom de l'en-tête. La valeur est **la clé seule**, `kura_…`, sans `Bearer`, sans espace ni retour à la ligne.
 
 Un connecteur ajouté sur le web est aussi disponible dans les apps Claude iOS et Android. Active-le dans une conversation avec le menu des outils.
 
@@ -86,7 +86,7 @@ Depuis l'app Claude mobile, avec le connecteur Kura activé :
 2. « Ce midi riz et deux œufs » : Claude appelle `log_meal`. Les œufs, comptés en pièces, rendent le repas « valeurs partielles » tant qu'aucun poids moyen n'existe.
 3. « Résumé de ma journée » : Claude appelle `get_summary`.
 
-Côté Supabase, **Edge Functions → mcp → Logs** ne doit montrer que des événements et des codes (`auth_refused`, `mcp_error`), jamais de contenu.
+Côté Supabase, **Edge Functions → mcp → Logs** ne doit montrer que des événements et des codes (`auth_refused`, `mcp_error`), jamais de contenu. En cas de refus, `auth_refused` indique les en-têtes d'authentification reçus (nom, longueur, préfixe `kura_`) : c'est le premier endroit à regarder si le connecteur ne se connecte pas.
 
 ## Exploitation
 

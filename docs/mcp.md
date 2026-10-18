@@ -11,7 +11,7 @@ Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`
 
 ## Authentification par clé API (phase 1)
 
-- **En-tête** : la clé est envoyée dans `Authorization: Bearer kura_…` (Claude Code). Elle peut aussi l'être dans un en-tête `X-…`, pour les clients qui n'offrent qu'une liste fixe, comme le connecteur claude.ai : `X-API-Key`, `X-Auth-Token`, `X-Auth-API-Key`, `X-Auth-Key`, `X-API-Token`, `X-Access-Token` ou `API-Key`. La valeur est alors la clé seule, avec ou sans `Bearer` devant (`API_KEY_HEADERS` dans `packages/core/src/api-key.ts`).
+- **En-tête** : la clé est envoyée dans `Authorization: Bearer kura_…` (Claude Code), ou dans n'importe quel autre en-tête, la clé seule ou précédée de `Bearer`. C'est le cas du connecteur claude.ai, qui n'offre qu'une liste fixe d'en-têtes `X-…`. Le nom de l'en-tête ne compte pas : seule une valeur au format d'une clé est retenue, puis vérifiée par son hash (`apiKeyFromHeaders`).
 - **Format** : la clé fait 43 caractères aléatoires (32 octets) après le préfixe `kura_`. Ce format est vérifié quel que soit l'en-tête.
 - **Stockage** : la table `api_key` ne garde que le hash SHA-256 de la clé, et son début (`key_prefix`) pour la reconnaître. La clé en clair n'est affichée qu'une fois, à la création. Elle n'est jamais stockée ni loggée.
 - **Droits d'une session** : une session (app ou tools MCP) peut créer, lire, révoquer et supprimer ses clés. Elle ne peut ni réactiver une clé révoquée, ni réécrire son hash.
@@ -134,7 +134,7 @@ Il n'y a aucun objectif ni jugement, et les descriptions des tools rappellent à
 ## Logs
 
 Les logs ne contiennent que des événements, des identifiants et des codes d'erreur (`log.ts`), jamais de contenu ni de message d'erreur Postgres, qui peut contenir des valeurs. Événements actuels :
-- `auth_refused`, avec la raison ;
+- `auth_refused`, avec la raison et les en-têtes d'authentification reçus : leur nom, la longueur de leur valeur et si elle commence par `kura_`, jamais la valeur elle-même ;
 - `auth_unavailable`, avec le code ;
 - `mcp_error`, avec le code.
 
