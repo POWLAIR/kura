@@ -65,6 +65,26 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"food_conversion": {
+                  Row: {
+                    "created_at": string,"density_g_ml": number | null,"food_ref_id": number,"id": number,"piece_weight_g": number | null,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"density_g_ml"?: number | null,"food_ref_id": number,"id"?: never,"piece_weight_g"?: number | null,"updated_at"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"density_g_ml"?: number | null,"food_ref_id"?: number,"id"?: never,"piece_weight_g"?: number | null,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "food_conversion_food_ref_id_fkey"
+      columns: ["food_ref_id"]
+isOneToOne: false
+      referencedRelation: "food_ref"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"food_ref": {
                   Row: {
                     "carbs_g": number | null,"code": string,"created_at": string,"energy_kcal": number | null,"fat_g": number | null,"fiber_g": number | null,"id": number,"micronutrients": NonNullable<Json>,"name": string,"nutrient_details": NonNullable<Json>,"piece_weight_g": number | null,"protein_g": number | null,"salt_g": number | null,"saturated_fat_g": number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g": number | null,"updated_at": string
@@ -276,14 +296,22 @@ isOneToOne: false
 "meal_totals":
 { Args: { "p_meal_id": number }; Returns: Json
                            },
+"refresh_meal":
+{ Args: { "p_meal_id": number }; Returns: undefined
+                           },
 "restock_item":
 { Args: { "p_expires_on"?: string,"p_item_id": number,"p_quantity"?: number,"p_unit"?: Database["public"]['Enums']["quantity_unit"] }; Returns: undefined
+                           },
+"set_food_conversion":
+{ Args: { "p_changes": Json,"p_food_ref_id": number }; Returns: {
+              "density_g_ml": number,"meals_updated": number,"piece_weight_g": number
+            }[]
                            },
 "stock_level_fraction":
 { Args: { "level": Database["public"]['Enums']["stock_level"] }; Returns: number
                            },
 "to_grams":
-{ Args: { "p_piece_weight_g": number,"p_quantity": number,"p_unit": Database["public"]['Enums']["quantity_unit"] }; Returns: number
+{ Args: { "p_density_g_ml"?: number,"p_piece_weight_g": number,"p_quantity": number,"p_unit": Database["public"]['Enums']["quantity_unit"] }; Returns: number
                            },
 "update_item":
 { Args: { "p_changes": Json,"p_item_id": number }; Returns: undefined

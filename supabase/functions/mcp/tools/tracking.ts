@@ -2,15 +2,18 @@ import {
   createFoodMatcher,
   daysBetween,
   type Food,
+  FoodConversionInput,
   LogMealInput,
   LogWeightInput,
   LogWorkoutInput,
   localDate,
   type MealItemAmbiguity,
   type MealNutrition,
+  missingConversions,
   NutritionTotals,
   periodRange,
   resolveMealItems,
+  type StoredMealItem,
   SummaryInput,
   sumNutrition,
   TIMEZONE,
@@ -21,7 +24,8 @@ import type { Tx } from "../db.ts";
 import type { UserDb } from "../server.ts";
 import { compact, ok, userErrors } from "./result.ts";
 
-// Tools de suivi (issue #8) : log_meal, log_workout, log_weight, get_summary.
+// Tools de suivi (issue #8) : log_meal, log_workout, log_weight, get_summary, et
+// set_food_conversion (issue #20).
 // Totaux nutritionnels calculés en SQL depuis food_ref (public.log_meal), jamais par Claude.
 // Chaque log_* exige une clé d'idempotence : rejoué, il renvoie l'enregistrement existant.
 // Les journées sont découpées à l'heure de Paris (TIMEZONE).
@@ -31,6 +35,9 @@ const MEAL_HINTS: Record<MealItemAmbiguity["reason"], string> = {
   unknown_food:
     "food_ref_id inconnu : relancer cet aliment sans food_ref_id pour obtenir des candidats.",
 };
+
+const CONVERSION_HINT =
+  "Valeurs partielles : demander à l'utilisateur le poids d'une pièce (pesée, emballage) ou la densité de ces aliments, sans jamais les estimer, puis appeler set_food_conversion. Ce repas et les précédents seront recalculés.";
 
 const NEUTRAL =
   "Présenter les chiffres tels quels : aucun commentaire sur le poids, les quantités mangées ou les calories, aucun objectif.";
@@ -60,7 +67,7 @@ async function mealView(tx: Tx, mealId: number) {
       to_char(m.eaten_at at time zone ${TIMEZONE}, 'YYYY-MM-DD') as day,
       to_char(m.eaten_at at time zone ${TIMEZONE}, 'HH24:MI') as time,
       coalesce(json_agg(json_build_object(
-        'name', coalesce(mi.name, f.name), 'food', f.name,
+        'name', coalesce(mi.name, f.name), 'food', f.name, 'food_ref_id', mi.food_ref_id,
         'quantity', mi.quantity, 'unit', mi.unit, 'grams', mi.quantity_g
       ) order by mi.id) filter (where mi.id is not null), '[]') as items
     from public.meal m
@@ -74,15 +81,24 @@ async function mealView(tx: Tx, mealId: number) {
     label: meal.label,
     eaten_at: `${meal.day} ${meal.time}`,
     nutrition: sumNutrition([nutritionOf(meal)]),
-    items: meal.items.map(compact),
+    items: meal.items.map(compact) as StoredMealItem[],
   };
+}
+
+// Repas enregistré, avec les aliments à convertir quand il en reste.
+async function loggedMeal(tx: Tx, mealId: number, replayed: boolean) {
+  const meal = await mealView(tx, mealId);
+  const missing = missingConversions(meal.items);
+  return missing.length > 0
+    ? { replayed, meal, missing_conversions: missing, hint: CONVERSION_HINT }
+    : { replayed, meal };
 }
 
 async function logMeal(tx: Tx, input: LogMealInput) {
   // Rejoué : le repas existe, inutile de rapprocher à nouveau les aliments.
   const [existing] = await tx<{ id: number }[]>`
     select id from public.meal where idempotency_key = ${input.idempotency_key}`;
-  if (existing) return { replayed: true, meal: await mealView(tx, existing.id) };
+  if (existing) return loggedMeal(tx, existing.id, true);
 
   const foods = await tx<Food[]>`select id, code, name from public.food_ref`;
   const { items, ambiguous } = resolveMealItems(input.items, {
@@ -107,7 +123,18 @@ async function logMeal(tx: Tx, input: LogMealInput) {
       ${input.label}, ${tx.json(items as unknown as postgres.JSONValue)},
       ${input.idempotency_key}, ${input.eaten_at ?? null}::timestamptz)`;
   if (!row) throw new Error("log_meal sans résultat");
-  return { replayed: row.replayed, meal: await mealView(tx, row.meal_id) };
+  return loggedMeal(tx, row.meal_id, row.replayed);
+}
+
+async function setFoodConversion(tx: Tx, input: FoodConversionInput) {
+  const { food_ref_id, ...changes } = input;
+  const [row] = await tx<
+    { piece_weight_g: number | null; density_g_ml: number | null; meals_updated: number }[]
+  >`select * from public.set_food_conversion(${food_ref_id}, ${tx.json(changes)})`;
+  if (!row) throw new Error("set_food_conversion sans résultat");
+  const [food] = await tx<{ name: string }[]>`
+    select name from public.food_ref where id = ${food_ref_id}`;
+  return { food: { id: food_ref_id, name: food?.name }, ...row };
 }
 
 async function logWorkout(tx: Tx, input: LogWorkoutInput) {
@@ -221,10 +248,21 @@ export function registerTrackingTools(server: McpServer, db: UserDb): void {
     {
       title: "Enregistrer un repas",
       description:
-        "Enregistre un repas hors recette : un libellé et la liste des aliments avec la quantité dans l'unité dite (g, kg, ml, cl, l, piece), sans convertir soi-même en grammes ni estimer de valeurs nutritionnelles. Le serveur rapproche chaque aliment de Ciqual et calcule les totaux ; si un aliment est ambigu, rien n'est enregistré et les candidats sont renvoyés. Une pièce sans poids moyen ou un volume rendent le repas « valeurs partielles ». idempotency_key unique par repas.",
+        "Enregistre un repas hors recette : un libellé et la liste des aliments avec la quantité dans l'unité dite (g, kg, ml, cl, l, piece), sans convertir soi-même en grammes ni estimer de valeurs nutritionnelles. Le serveur rapproche chaque aliment de Ciqual et calcule les totaux ; si un aliment est ambigu, rien n'est enregistré et les candidats sont renvoyés. Une pièce sans poids ou un volume sans densité rendent le repas « valeurs partielles » : missing_conversions liste les valeurs à demander à l'utilisateur (voir set_food_conversion). idempotency_key unique par repas.",
       inputSchema: LogMealInput,
     },
     (input) => userErrors(async () => ok(await db((tx) => logMeal(tx, input)))),
+  );
+
+  server.registerTool(
+    "set_food_conversion",
+    {
+      title: "Poids d'une pièce ou densité d'un aliment",
+      description:
+        "Enregistre le poids d'une pièce (g) ou la densité (g/ml) d'un aliment, tels que l'utilisateur les a donnés : pesée, emballage. Ne jamais les estimer ni les proposer soi-même ; les demander quand log_meal renvoie missing_conversions. La valeur sert aux prochains repas et recalcule les repas déjà saisis avec cet aliment en pièces ou en ml (meals_updated). Un champ absent est gardé, null le retire.",
+      inputSchema: FoodConversionInput,
+    },
+    (input) => userErrors(async () => ok(await db((tx) => setFoodConversion(tx, input)))),
   );
 
   server.registerTool(

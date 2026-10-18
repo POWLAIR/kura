@@ -24,13 +24,14 @@ Deno.test({
       await sql`insert into auth.users (id, email) values (${user}, ${`${user}@kura.test`})`;
       await sql`insert into public.api_key (user_id, label, key_prefix, key_hash)
                 values (${user}, 'Test', ${key.slice(0, 12)}, ${await hashApiKey(key)})`;
-      const [, verte, , kiwi] = await sql<{ id: number }[]>`
+      const [, verte, , kiwi, oeuf] = await sql<{ id: number }[]>`
         insert into public.food_ref (source, code, name, energy_kcal, protein_g, sugars_g, piece_weight_g)
         values
           ('off', ${`test-${tag}-1`}, ${`Quinoa ${tag}, cru`}, 360, 14, null, null),
           ('off', ${`test-${tag}-2`}, ${`Lentille ${tag}, verte, crue`}, 330, 24, 1.5, null),
           ('off', ${`test-${tag}-3`}, ${`Lentille ${tag}, corail, crue`}, 340, 25, 2, null),
-          ('off', ${`test-${tag}-4`}, ${`Kiwi ${tag}, cru`}, 60, 1, 9, 75)
+          ('off', ${`test-${tag}-4`}, ${`Kiwi ${tag}, cru`}, 60, 1, 9, 75),
+          ('off', ${`test-${tag}-5`}, ${`Oeuf ${tag}, cru`}, 140, 12.5, 0.5, null)
         returning id`;
 
       const app = createApp(sql);
@@ -155,6 +156,49 @@ Deno.test({
         });
         assertEquals(week.weight, { average_kg: 70.7, measures: 2 });
       });
+
+      await t.step(
+        "set_food_conversion : poids donné par l'utilisateur, repas recalculés",
+        async () => {
+          const eggs = {
+            label: `Oeufs ${tag}`,
+            eaten_at: "2026-10-17T12:00:00+02:00",
+            idempotency_key: `oeufs-${tag}`,
+            items: [{ name: `Oeufs ${tag}`, quantity: 2, unit: "piece", food_ref_id: oeuf?.id }],
+          };
+          const first = await call("log_meal", eggs);
+          assertEquals(first.meal.nutrition.partial_values, true);
+          assertEquals(first.missing_conversions, [
+            {
+              food_ref_id: oeuf?.id,
+              name: `Oeufs ${tag}`,
+              food: `Oeuf ${tag}, cru`,
+              unit: "piece",
+              field: "piece_weight_g",
+            },
+          ]);
+
+          const refused = await call("set_food_conversion", { food_ref_id: oeuf?.id });
+          assertEquals(typeof refused.error, "string"); // aucune valeur donnée
+
+          const set = await call("set_food_conversion", {
+            food_ref_id: oeuf?.id,
+            piece_weight_g: 60,
+          });
+          assertEquals(set, {
+            food: { id: oeuf?.id, name: `Oeuf ${tag}, cru` },
+            piece_weight_g: 60,
+            density_g_ml: null,
+            meals_updated: 1,
+          });
+
+          // 2 œufs de 60 g à 140 kcal pour 100 g.
+          const day = await call("get_summary", { period: "day", date: "2026-10-17" });
+          assertEquals([day.nutrition.energy_kcal, day.nutrition.partial_values], [168, false]);
+          const replay = await call("log_meal", eggs);
+          assertEquals([replay.meal.items[0].grams, replay.missing_conversions], [120, undefined]);
+        },
+      );
 
       await t.step("aucune donnée de repas ou de poids dans les logs", () => {
         assertEquals(

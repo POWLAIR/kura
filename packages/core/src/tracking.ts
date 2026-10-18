@@ -75,6 +75,33 @@ export const SummaryInput = z.object({
 });
 export type SummaryInput = z.infer<typeof SummaryInput>;
 
+// Poids d'une pièce ou densité d'un aliment, donnés par l'utilisateur : jamais estimés.
+export const FoodConversionInput = z
+  .object({
+    food_ref_id: Id.describe("Aliment de référence, ex. un food_ref_id de missing_conversions"),
+    piece_weight_g: z
+      .number()
+      .positive()
+      .max(10000)
+      .nullable()
+      .optional()
+      .describe(
+        "Poids d'une pièce en grammes, tel que l'utilisateur l'a pesé ou lu sur l'emballage ; null le retire",
+      ),
+    density_g_ml: z
+      .number()
+      .positive()
+      .max(3)
+      .nullable()
+      .optional()
+      .describe("Densité en g/ml, telle que l'utilisateur l'a donnée ; null la retire"),
+  })
+  .strict()
+  .refine((c) => c.piece_weight_g !== undefined || c.density_g_ml !== undefined, {
+    message: "Donner piece_weight_g ou density_g_ml",
+  });
+export type FoodConversionInput = z.infer<typeof FoodConversionInput>;
+
 // ---------------------------------------------------------------------------
 // Aliments d'un repas
 // ---------------------------------------------------------------------------
@@ -116,6 +143,43 @@ export function resolveMealItems(
     }
   }
   return { items: resolved, ambiguous };
+}
+
+// Aliment d'un repas tel que stocké : grams absent si la conversion a été impossible.
+export type StoredMealItem = {
+  name: string;
+  food?: string;
+  food_ref_id?: number;
+  unit?: StockAmount["unit"];
+  grams?: number;
+};
+
+export type MissingConversion = {
+  food_ref_id: number;
+  name: string;
+  food: string | undefined;
+  unit: "piece" | "ml";
+  field: "piece_weight_g" | "density_g_ml";
+};
+
+// Aliments rattachés à food_ref mais non convertis en grammes, faute de poids par pièce
+// ou de densité : la valeur est à demander à l'utilisateur, une fois par aliment et unité.
+export function missingConversions(items: StoredMealItem[]): MissingConversion[] {
+  const missing = new Map<string, MissingConversion>();
+  for (const item of items) {
+    if (item.food_ref_id === undefined || item.grams !== undefined) continue;
+    if (item.unit !== "piece" && item.unit !== "ml") continue;
+    const key = `${item.food_ref_id}:${item.unit}`;
+    if (missing.has(key)) continue;
+    missing.set(key, {
+      food_ref_id: item.food_ref_id,
+      name: item.name,
+      food: item.food,
+      unit: item.unit,
+      field: item.unit === "piece" ? "piece_weight_g" : "density_g_ml",
+    });
+  }
+  return [...missing.values()];
 }
 
 // ---------------------------------------------------------------------------
