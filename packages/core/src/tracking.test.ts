@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createFoodMatcher, type Food } from "./food-match.ts";
 import {
   daysBetween,
+  FoodConversionInput,
   LogMealInput,
   LogWeightInput,
   localDate,
+  missingConversions,
   periodRange,
   resolveMealItems,
   sumNutrition,
@@ -40,6 +42,17 @@ describe("schémas", () => {
     expect(
       LogWeightInput.safeParse({ weight_kg: 70.4, idempotency_key: "pesee-0001" }).success,
     ).toBe(true);
+  });
+
+  it.each([
+    [{ food_ref_id: 1, piece_weight_g: 60 }, true],
+    [{ food_ref_id: 1, density_g_ml: 1.03, piece_weight_g: null }, true],
+    [{ food_ref_id: 1 }, false], // rien à enregistrer
+    [{ food_ref_id: 1, piece_weight_g: 0 }, false],
+    [{ food_ref_id: 1, density_g_ml: 12 }, false], // g/ml : sans doute une unité confondue
+    [{ food_ref_id: 1, piece_weight_g: 60, unit: "g" }, false],
+  ])("conversion %o : %s", (input, valid) => {
+    expect(FoodConversionInput.safeParse(input).success).toBe(valid);
   });
 });
 
@@ -141,6 +154,24 @@ describe("resolveMealItems", () => {
     expect(ambiguous.map((a) => [a.name, a.reason, a.candidates.map((f) => f.id)])).toEqual([
       ["riz", "food", [2, 3]],
       ["truc", "unknown_food", []],
+    ]);
+  });
+});
+
+describe("missingConversions", () => {
+  it("liste une fois chaque aliment et unité non convertis, pas les grammes ni les aliments libres", () => {
+    expect(
+      missingConversions([
+        { name: "œufs", food: "Oeuf, cru", food_ref_id: 1, unit: "piece" },
+        { name: "œuf dur", food: "Oeuf, cru", food_ref_id: 1, unit: "piece" },
+        { name: "sauce soja", food: "Sauce soja", food_ref_id: 2, unit: "ml" },
+        { name: "riz", food: "Riz", food_ref_id: 3, unit: "g", grams: 150 },
+        { name: "kiwi", food: "Kiwi", food_ref_id: 4, unit: "piece", grams: 75 },
+        { name: "Sauce Kim Kee", unit: "ml" },
+      ]),
+    ).toEqual([
+      { food_ref_id: 1, name: "œufs", food: "Oeuf, cru", unit: "piece", field: "piece_weight_g" },
+      { food_ref_id: 2, name: "sauce soja", food: "Sauce soja", unit: "ml", field: "density_g_ml" },
     ]);
   });
 });

@@ -110,6 +110,7 @@ for (const [era, negotiation] of Object.entries({
       "log_meal",
       "log_weight",
       "log_workout",
+      "set_food_conversion",
       "update_item",
     ]);
     assertEquals(builtFor.at(-1), { keyId: 7, userId: "user-a" });

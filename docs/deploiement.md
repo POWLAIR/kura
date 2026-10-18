@@ -83,7 +83,7 @@ claude mcp add --transport http --scope user kura https://<ref>.supabase.co/func
 Depuis l'app Claude mobile, avec le connecteur Kura activé :
 
 1. « J'ai acheté 1 kg de riz » : Claude appelle `add_items`. Si le riz est ambigu, il propose les candidats Ciqual ou l'article « Riz long » déjà en stock.
-2. « Ce midi riz et deux œufs » : Claude appelle `log_meal`. Les œufs, comptés en pièces, rendent le repas « valeurs partielles » tant qu'aucun poids moyen n'existe.
+2. « Ce midi riz et deux œufs » : Claude appelle `log_meal`. Les œufs sont comptés en pièces : la première fois, Claude demande le poids d'un œuf, puis appelle `set_food_conversion`, qui recalcule le repas.
 3. « Résumé de ma journée » : Claude appelle `get_summary`.
 
 Côté Supabase, **Edge Functions → mcp → Logs** ne doit montrer que des événements et des codes (`auth_refused`, `mcp_error`), jamais de contenu. En cas de refus, `auth_refused` indique les en-têtes d'authentification reçus (nom, longueur, préfixe `kura_`) : c'est le premier endroit à regarder si le connecteur ne se connecte pas.

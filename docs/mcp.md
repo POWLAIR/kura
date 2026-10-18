@@ -95,6 +95,7 @@ Une saisie refusée par la base (article introuvable, unité incompatible…) re
 | `log_workout` | Séance : type, durée, intensité ressentie de 1 à 5 |
 | `log_weight` | Pesée en kg |
 | `get_summary` | Résumé d'un jour ou d'une semaine (lundi-dimanche) |
+| `set_food_conversion` | Poids d'une pièce ou densité d'un aliment, donnés par l'utilisateur |
 
 **Règles communes :**
 - **Entrées** : schémas Zod et logique pure dans `packages/core/src/tracking.ts`.
@@ -111,14 +112,22 @@ Une saisie refusée par la base (article introuvable, unité incompatible…) re
    Si un seul aliment est ambigu, rien n'est enregistré : la réponse (`logged: false`) liste les candidats, et Claude relance tout le repas.
 2. La fonction SQL `log_meal` enregistre le repas et ses aliments, avec la quantité dite (`quantity`, `unit`) et sa conversion en grammes (`to_grams`) :
    - grammes : tels quels ;
-   - pièces : seulement avec le poids moyen de `food_ref` (`piece_weight_g`) ;
-   - ml : jamais, faute de densité.
+   - pièces : avec le poids d'une pièce donné par l'utilisateur (`food_conversion`), sinon celui de `food_ref` (`piece_weight_g`) ;
+   - ml : avec la densité donnée par l'utilisateur ;
+   - sinon `null`, jamais d'estimation.
 3. `meal_totals` calcule les totaux pour toutes les clés (colonnes principales, `micronutrients`, `nutrient_details`), sur les aliments convertis en grammes : `{ "values": {…}, "incomplete": [clés] }`.
    - Une clé absente de tous les aliments est « non renseignée ».
    - Une clé absente de certains aliments seulement est dans `incomplete` : son total est un minimum.
 4. `meal.partial_values` vaut vrai dès qu'un aliment n'a pas de référence ou n'a pas pu être converti en grammes.
+5. La réponse liste dans `missing_conversions` les aliments rattachés à `food_ref` mais non convertis (`missingConversions` dans `packages/core`), avec la valeur à demander : `piece_weight_g` ou `density_g_ml`.
 
-> **Limite actuelle** : Ciqual ne fournit ni poids moyen par pièce ni densité. « 2 œufs » ou « 15 ml de sauce soja » rendent donc le repas partiel, plutôt que d'inventer un poids. Pour avoir des totaux complets, il faut donner les grammes quand on les connaît. La quantité dite est gardée pour recalculer le jour où ces données existeront.
+### `set_food_conversion` : poids et densités de l'utilisateur
+
+Ciqual ne fournit ni poids moyen par pièce ni densité : « 2 œufs » ou « 15 ml de sauce soja » rendraient sinon le repas partiel. Ces valeurs viennent de l'utilisateur, pesées ou lues sur l'emballage. Claude les demande quand `log_meal` renvoie `missing_conversions` ; les descriptions des tools lui interdisent de les estimer.
+
+- **Stockage** : la table `food_conversion`, sous RLS, une ligne par utilisateur et aliment. Ses valeurs priment sur `food_ref.piece_weight_g` et ne valent que pour cet utilisateur.
+- **Modification** : un champ absent garde sa valeur, `null` la retire. Une ligne sans valeur est supprimée.
+- **Recalcul** : la fonction SQL `set_food_conversion` reconvertit, depuis la quantité dite, tous les repas de l'utilisateur qui contiennent l'aliment en pièces ou en ml, puis recalcule leurs totaux (`refresh_meal`). Une valeur corrigée s'applique donc aussi aux repas passés ; une valeur retirée les rend de nouveau partiels. La réponse donne le nombre de repas recalculés (`meals_updated`).
 
 ### `get_summary`
 
@@ -160,7 +169,7 @@ Pour Claude Code, `.mcp.json` déclare le serveur `kura-local`, avec la clé lue
 - **Avec base** :
   - `db_test.ts` vérifie que `asUser` applique la RLS et que les clés révoquées sont refusées ;
   - `tools/inventory_test.ts` déroule les tools d'inventaire de bout en bout avec le client MCP officiel.
-  - `tools/tracking_test.ts` déroule les tools de suivi : ambiguïté sans enregistrement, totaux et valeurs partielles, rejeux sans doublon, journées à l'heure de Paris, aucune donnée dans les logs.
+  - `tools/tracking_test.ts` déroule les tools de suivi : ambiguïté sans enregistrement, totaux et valeurs partielles, rejeux sans doublon, journées à l'heure de Paris, poids donné après coup et repas recalculé, aucune donnée dans les logs.
 
   La CI les lance contre sa base ; en local, il suffit de définir `KURA_TEST_DB_URL` :
 
