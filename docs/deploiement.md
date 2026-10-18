@@ -24,7 +24,8 @@ pnpm functions:deploy               # déploie supabase/functions/mcp (bundling 
 ```
 
 - **Secrets** : aucun n'est à configurer. La fonction n'utilise que `SUPABASE_DB_URL`, fournie d'office aux Edge Functions. `verify_jwt = false` est repris de `supabase/config.toml`.
-- **Si le déploiement ne trouve pas `packages/core`** : la fonction l'importe hors de `supabase/functions` (import map `@kura/core`). Il faut alors le signaler, et la solution sera de le copier dans `supabase/functions/_shared/` au moment du déploiement.
+- **`packages/core`** : la fonction l'importe hors de `supabase/functions` (import map `@kura/core`). `--use-api` l'embarque bien ; c'est vérifié au premier déploiement.
+- **Mot de passe de la base** : `db push` et `migration list --linked` passent par le rôle de connexion temporaire de la CLI. Une fois `supabase login` fait, ils n'ont pas besoin du mot de passe.
 
 Vérification : sans clé, la fonction doit répondre `401`.
 
@@ -35,6 +36,8 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST https://<ref>.supabase.co/funct
 ## 3. Données : Ciqual, inventaire, clé API
 
 Les scripts locaux lisent `.env` par défaut. Pour viser la base déployée, crée `.env.production` à la racine. Il n'est jamais commité, et Claude Code ne le lit pas.
+
+La CLI masque la clé `sb_secret_…`. Pour la clé, copie-la depuis le dashboard, ou prends la clé `service_role` (ancienne génération) que donne `supabase projects api-keys`.
 
 ```bash
 SUPABASE_URL=https://<ref>.supabase.co
@@ -48,7 +51,8 @@ Puis lance chaque commande avec `KURA_ENV_FILE=.env.production`. Les scripts aff
 # Référentiel Ciqual (voir docs/ciqual.md)
 KURA_ENV_FILE=.env.production pnpm import:ciqual <dossier des XML Ciqual>
 
-# Inventaire Notion : vérifier le dry-run, puis importer (voir docs/notion.md)
+# Inventaire Notion : vérifier le dry-run, puis importer (voir docs/notion.md).
+# Si la page a changé, le dry-run refuse un choix qui vise un article disparu : mettre à jour notion-choices.json.
 KURA_ENV_FILE=.env.production pnpm import:notion "https://app.notion.com/p/3f8a7a154ac181b3ab48c1689d0ea415" --dry-run --choices scripts/notion-choices.json
 KURA_ENV_FILE=.env.production pnpm import:notion "https://app.notion.com/p/3f8a7a154ac181b3ab48c1689d0ea415" --user <email> --choices scripts/notion-choices.json
 
