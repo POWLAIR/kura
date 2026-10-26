@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`) qui expose les tools de la conception (section « Serveur MCP ») à Claude. Les tools d'inventaire et de suivi sont décrits plus bas. À la connexion, le serveur envoie aussi à Claude des instructions communes (`server.ts`) : ne jamais estimer de valeur nutritionnelle, relancer sur les ambiguïtés, une clé d'idempotence par enregistrement, rester neutre.
+Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`) qui expose les tools de la conception (section « Serveur MCP ») à Claude. Les tools d'inventaire et de suivi sont décrits plus bas. À la connexion, le serveur envoie aussi à Claude des instructions communes (`server.ts`) : ne jamais estimer de valeur nutritionnelle, relancer sur les ambiguïtés, partir du stock pour les recettes, enregistrer le repas quand l'utilisateur dit avoir mangé et mettre à jour le stock des ingrédients pris dans le stock quand il a cuisiné, une clé d'idempotence par enregistrement, rester neutre.
 
 ## Transport
 
