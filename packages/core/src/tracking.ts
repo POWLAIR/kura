@@ -44,30 +44,86 @@ export const LogMealInput = z.object({
 });
 export type LogMealInput = z.infer<typeof LogMealInput>;
 
+const WorkoutType = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .describe("Activité, ex. « vélo », « course »");
+const DurationMin = z.number().int().positive().max(1440).describe("Durée en minutes");
+const Intensity = z
+  .number()
+  .int()
+  .min(1)
+  .max(5)
+  .describe("Intensité ressentie, de 1 (facile) à 5 (très dur)");
+const Notes = z.string().trim().max(1000);
+const WeightKg = z.number().positive().lt(500).describe("Poids en kg");
+
 export const LogWorkoutInput = z.object({
-  type: z.string().trim().min(1).max(100).describe("Activité, ex. « vélo », « course »"),
-  duration_min: z.number().int().positive().max(1440).describe("Durée en minutes"),
-  perceived_intensity: z
-    .number()
-    .int()
-    .min(1)
-    .max(5)
-    .optional()
-    .describe("Intensité ressentie, de 1 (facile) à 5 (très dur)"),
+  type: WorkoutType,
+  duration_min: DurationMin,
+  perceived_intensity: Intensity.optional(),
   started_at: IsoDateTime.optional().describe("Début, ISO avec fuseau ; par défaut maintenant"),
-  notes: z.string().trim().max(1000).optional(),
+  notes: Notes.optional(),
   idempotency_key: IdempotencyKey.describe("Identifiant unique de cette séance"),
 });
 export type LogWorkoutInput = z.infer<typeof LogWorkoutInput>;
 
 export const LogWeightInput = z.object({
-  weight_kg: z.number().positive().lt(500).describe("Poids en kg"),
+  weight_kg: WeightKg,
   measured_at: IsoDateTime.optional().describe(
     "Date-heure ISO avec fuseau ; par défaut maintenant",
   ),
   idempotency_key: IdempotencyKey.describe("Identifiant unique de cette pesée"),
 });
 export type LogWeightInput = z.infer<typeof LogWeightInput>;
+
+// ---------------------------------------------------------------------------
+// Corrections
+// ---------------------------------------------------------------------------
+
+// Un repas se corrige en le supprimant puis en le ressaisissant : ses totaux dépendent
+// de tous ses aliments.
+export const EntryKind = z.enum(["meal", "workout", "weight"]);
+export type EntryKind = z.infer<typeof EntryKind>;
+
+const EntryId = Id.describe("Id de l'entrée, donné par get_summary pour un jour");
+const nonEmpty = (changes: object) => Object.keys(changes).length > 0;
+const NO_CHANGE = { message: "Aucune modification demandée" };
+
+export const DeleteEntryInput = z.object({
+  kind: EntryKind.describe("Repas, séance ou pesée"),
+  id: EntryId,
+});
+export type DeleteEntryInput = z.infer<typeof DeleteEntryInput>;
+
+export const UpdateWorkoutInput = z.object({
+  id: EntryId,
+  changes: z
+    .object({
+      type: WorkoutType.optional(),
+      duration_min: DurationMin.optional(),
+      perceived_intensity: Intensity.nullable().optional().describe("null l'efface"),
+      notes: Notes.nullable().optional().describe("null les efface"),
+      started_at: IsoDateTime.optional().describe("Début, ISO avec fuseau"),
+    })
+    .strict()
+    .refine(nonEmpty, NO_CHANGE),
+});
+export type UpdateWorkoutInput = z.infer<typeof UpdateWorkoutInput>;
+
+export const UpdateWeightInput = z.object({
+  id: EntryId,
+  changes: z
+    .object({
+      weight_kg: WeightKg.optional(),
+      measured_at: IsoDateTime.optional().describe("Date-heure ISO avec fuseau"),
+    })
+    .strict()
+    .refine(nonEmpty, NO_CHANGE),
+});
+export type UpdateWeightInput = z.infer<typeof UpdateWeightInput>;
 
 export const SummaryInput = z.object({
   period: z.enum(["day", "week"]).describe("Jour, ou semaine du lundi au dimanche"),

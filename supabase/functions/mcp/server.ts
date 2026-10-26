@@ -6,7 +6,7 @@ import { registerTrackingTools } from "./tools/tracking.ts";
 // Requêtes de l'utilisateur authentifié : toujours sous RLS (voir asUser).
 export type UserDb = <T>(fn: (tx: Tx) => Promise<T>) => Promise<T>;
 
-export const SERVER_INFO = { name: "kura", version: "0.4.0" };
+export const SERVER_INFO = { name: "kura", version: "0.5.0" };
 
 // Règles communes à tous les tools, lues par Claude à la connexion (docs/conception.md).
 const INSTRUCTIONS = `Kura : inventaire de cuisine et suivi (repas, sport, poids), en français.

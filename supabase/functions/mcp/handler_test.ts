@@ -104,6 +104,7 @@ for (const [era, negotiation] of Object.entries({
     assertEquals(client.getServerVersion()?.name, SERVER_INFO.name);
     assertEquals((await client.listTools()).tools.map((t) => t.name).sort(), [
       "add_items",
+      "delete_entry",
       "get_inventory",
       "get_shopping_list",
       "get_summary",
@@ -112,6 +113,8 @@ for (const [era, negotiation] of Object.entries({
       "log_workout",
       "set_food_conversion",
       "update_item",
+      "update_weight",
+      "update_workout",
     ]);
     assertEquals(builtFor.at(-1), { keyId: 7, userId: "user-a" });
     await client.close();

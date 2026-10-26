@@ -1,6 +1,8 @@
 import {
   createFoodMatcher,
+  DeleteEntryInput,
   daysBetween,
+  type EntryKind,
   type Food,
   FoodConversionInput,
   LogMealInput,
@@ -17,15 +19,17 @@ import {
   SummaryInput,
   sumNutrition,
   TIMEZONE,
+  UpdateWeightInput,
+  UpdateWorkoutInput,
 } from "@kura/core";
 import type { McpServer } from "@modelcontextprotocol/server";
 import type postgres from "postgres";
 import type { Tx } from "../db.ts";
 import type { UserDb } from "../server.ts";
-import { compact, ok, userErrors } from "./result.ts";
+import { compact, InputError, ok, userErrors } from "./result.ts";
 
-// Tools de suivi (issue #8) : log_meal, log_workout, log_weight, get_summary, et
-// set_food_conversion (issue #20).
+// Tools de suivi (issue #8) : log_meal, log_workout, log_weight, get_summary ;
+// set_food_conversion (issue #20) ; delete_entry, update_workout, update_weight (issue #22).
 // Totaux nutritionnels calculés en SQL depuis food_ref (public.log_meal), jamais par Claude.
 // Chaque log_* exige une clé d'idempotence : rejoué, il renvoie l'enregistrement existant.
 // Les journées sont découpées à l'heure de Paris (TIMEZONE).
@@ -137,6 +141,29 @@ async function setFoodConversion(tx: Tx, input: FoodConversionInput) {
   return { food: { id: food_ref_id, name: food?.name }, ...row };
 }
 
+// Séance ou pesée telle que stockée, par id ou par clé d'idempotence.
+type EntryRef = { id: number } | { idempotency_key: string };
+
+function whereRef(tx: Tx, ref: EntryRef) {
+  return "id" in ref ? tx`id = ${ref.id}` : tx`idempotency_key = ${ref.idempotency_key}`;
+}
+
+async function workoutView(tx: Tx, ref: EntryRef) {
+  const [workout] = await tx`
+    select id, type, duration_min, perceived_intensity, notes,
+      to_char(started_at at time zone ${TIMEZONE}, 'YYYY-MM-DD HH24:MI') as started_at
+    from public.workout where ${whereRef(tx, ref)}`;
+  return compact(workout ?? {});
+}
+
+async function weightView(tx: Tx, ref: EntryRef) {
+  const [measure] = await tx`
+    select id, weight_kg,
+      to_char(measured_at at time zone ${TIMEZONE}, 'YYYY-MM-DD HH24:MI') as measured_at
+    from public.body_measure where ${whereRef(tx, ref)}`;
+  return measure;
+}
+
 async function logWorkout(tx: Tx, input: LogWorkoutInput) {
   const [created] = await tx<{ id: number }[]>`
     insert into public.workout (started_at, type, duration_min, perceived_intensity, notes, idempotency_key)
@@ -147,11 +174,8 @@ async function logWorkout(tx: Tx, input: LogWorkoutInput) {
     )
     on conflict (user_id, idempotency_key) do nothing
     returning id`;
-  const [workout] = await tx`
-    select id, type, duration_min, perceived_intensity, notes,
-      to_char(started_at at time zone ${TIMEZONE}, 'YYYY-MM-DD HH24:MI') as started_at
-    from public.workout where idempotency_key = ${input.idempotency_key}`;
-  return { replayed: !created, workout: compact(workout ?? {}) };
+  const workout = await workoutView(tx, { idempotency_key: input.idempotency_key });
+  return { replayed: !created, workout };
 }
 
 async function logWeight(tx: Tx, input: LogWeightInput) {
@@ -163,11 +187,57 @@ async function logWeight(tx: Tx, input: LogWeightInput) {
     )
     on conflict (user_id, idempotency_key) do nothing
     returning id`;
-  const [measure] = await tx`
-    select id, weight_kg,
-      to_char(measured_at at time zone ${TIMEZONE}, 'YYYY-MM-DD HH24:MI') as measured_at
-    from public.body_measure where idempotency_key = ${input.idempotency_key}`;
-  return { replayed: !created, weight: measure };
+  const weight = await weightView(tx, { idempotency_key: input.idempotency_key });
+  return { replayed: !created, weight };
+}
+
+// ---------------------------------------------------------------------------
+// Corrections (issue #22)
+// ---------------------------------------------------------------------------
+
+const ENTRY_LABEL: Record<EntryKind, string> = {
+  meal: "Repas",
+  workout: "Séance",
+  weight: "Pesée",
+};
+
+function notFound(kind: EntryKind, id: number): InputError {
+  return new InputError(`${ENTRY_LABEL[kind]} ${id} introuvable (déjà supprimé ?)`);
+}
+
+// Un repas emporte ses aliments (on delete cascade) ; le stock n'est pas touché.
+async function deleteEntry(tx: Tx, { kind, id }: DeleteEntryInput) {
+  const at = (column: string) =>
+    tx`to_char(${tx(column)} at time zone ${TIMEZONE}, 'YYYY-MM-DD HH24:MI')`;
+  const [deleted] =
+    kind === "meal"
+      ? await tx`
+          delete from public.meal where id = ${id}
+          returning id, label, ${at("eaten_at")} as at`
+      : kind === "workout"
+        ? await tx`
+            delete from public.workout where id = ${id}
+            returning id, type as label, ${at("started_at")} as at`
+        : await tx`
+            delete from public.body_measure where id = ${id}
+            returning id, ${at("measured_at")} as at`;
+  if (!deleted) throw notFound(kind, id);
+  return { deleted: { kind, ...deleted } };
+}
+
+// Champs validés par le schéma strict : leurs noms sont ceux des colonnes.
+async function updateWorkout(tx: Tx, { id, changes }: UpdateWorkoutInput) {
+  const [updated] = await tx`
+    update public.workout set ${tx(changes)} where id = ${id} returning id`;
+  if (!updated) throw notFound("workout", id);
+  return { workout: await workoutView(tx, { id }) };
+}
+
+async function updateWeight(tx: Tx, { id, changes }: UpdateWeightInput) {
+  const [updated] = await tx`
+    update public.body_measure set ${tx(changes)} where id = ${id} returning id`;
+  if (!updated) throw notFound("weight", id);
+  return { weight: await weightView(tx, { id }) };
 }
 
 async function summary(tx: Tx, input: SummaryInput) {
@@ -191,8 +261,8 @@ async function summary(tx: Tx, input: SummaryInput) {
       ${local("started_at", "YYYY-MM-DD")} as day, ${local("started_at", "HH24:MI")} as time
     from public.workout where started_at >= ${start} and started_at < ${end}
     order by started_at`;
-  const weights = await tx<{ day: string; time: string; weight_kg: number }[]>`
-    select weight_kg,
+  const weights = await tx<{ id: number; day: string; time: string; weight_kg: number }[]>`
+    select id, weight_kg,
       ${local("measured_at", "YYYY-MM-DD")} as day, ${local("measured_at", "HH24:MI")} as time
     from public.body_measure where measured_at >= ${start} and measured_at < ${end}
     order by measured_at`;
@@ -218,7 +288,7 @@ async function summary(tx: Tx, input: SummaryInput) {
         partial_values: m.partial_values,
       })),
       workouts: workouts.map(({ day: _day, ...w }) => compact(w)),
-      weights: weights.map((w) => ({ time: w.time, weight_kg: w.weight_kg })),
+      weights: weights.map((w) => ({ id: w.id, time: w.time, weight_kg: w.weight_kg })),
     };
   }
 
@@ -287,10 +357,43 @@ export function registerTrackingTools(server: McpServer, db: UserDb): void {
   );
 
   server.registerTool(
+    "delete_entry",
+    {
+      title: "Supprimer un repas, une séance ou une pesée",
+      description:
+        "Supprime un repas (avec ses aliments), une séance ou une pesée, par son id (get_summary d'un jour). Toujours confirmer avec l'utilisateur avant d'appeler. Pour corriger un repas : le supprimer puis le ressaisir avec log_meal et une nouvelle idempotency_key. Le stock n'est pas modifié : le corriger avec update_item si besoin.",
+      inputSchema: DeleteEntryInput,
+      annotations: { destructiveHint: true },
+    },
+    (input) => userErrors(async () => ok(await db((tx) => deleteEntry(tx, input)))),
+  );
+
+  server.registerTool(
+    "update_workout",
+    {
+      title: "Corriger une séance",
+      description:
+        "Corrige une séance par son id (get_summary d'un jour) : type, durée, intensité, notes, début. Un champ absent est gardé ; null efface l'intensité ou les notes.",
+      inputSchema: UpdateWorkoutInput,
+    },
+    (input) => userErrors(async () => ok(await db((tx) => updateWorkout(tx, input)))),
+  );
+
+  server.registerTool(
+    "update_weight",
+    {
+      title: "Corriger une pesée",
+      description: `Corrige une pesée par son id (get_summary d'un jour) : poids en kg, date-heure. ${NEUTRAL}`,
+      inputSchema: UpdateWeightInput,
+    },
+    (input) => userErrors(async () => ok(await db((tx) => updateWeight(tx, input)))),
+  );
+
+  server.registerTool(
     "get_summary",
     {
       title: "Résumé du jour ou de la semaine",
-      description: `Résumé d'un jour ou d'une semaine (lundi-dimanche, heure de Paris) : totaux nutritionnels principaux depuis Ciqual, repas, séances, pesées (moyenne sur la semaine). incomplete liste les valeurs dont le total est un minimum ; partial_values signale des aliments non comptés. Une valeur absente est « non renseignée », jamais 0. ${NEUTRAL}`,
+      description: `Résumé d'un jour ou d'une semaine (lundi-dimanche, heure de Paris) : totaux nutritionnels principaux depuis Ciqual, repas, séances, pesées (moyenne sur la semaine). incomplete liste les valeurs dont le total est un minimum ; partial_values signale des aliments non comptés. Une valeur absente est « non renseignée », jamais 0. Pour un jour, chaque repas, séance et pesée a son id (delete_entry, update_workout, update_weight). ${NEUTRAL}`,
       inputSchema: SummaryInput,
       annotations: { readOnlyHint: true },
     },

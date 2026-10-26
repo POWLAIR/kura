@@ -138,7 +138,14 @@ Deno.test({
         );
         assertEquals(day.nutrition.energy_kcal, 780);
         assertEquals(day.workout_minutes, 40);
-        assertEquals(day.weights, [{ time: "08:00", weight_kg: 70.46 }]);
+        assertEquals(
+          day.weights.map((w: { id: number; time: string; weight_kg: number }) => [
+            typeof w.id,
+            w.time,
+            w.weight_kg,
+          ]),
+          [["number", "08:00", 70.46]],
+        );
 
         const next = await call("get_summary", { period: "day", date: "2026-10-16" });
         assertEquals([next.meals, next.nutrition.energy_kcal], [[], undefined]);
@@ -200,9 +207,63 @@ Deno.test({
         },
       );
 
+      await t.step("corrections : séance et pesée corrigées, entrées supprimées", async () => {
+        const day = await call("get_summary", { period: "day", date: "2026-10-15" });
+        const [weight] = day.weights;
+        const [workout] = day.workouts;
+
+        const fixedWeight = await call("update_weight", {
+          id: weight.id,
+          changes: { weight_kg: 70.6 },
+        });
+        assertEquals(fixedWeight.weight, {
+          id: weight.id,
+          weight_kg: 70.6,
+          measured_at: "2026-10-15 08:00",
+        });
+
+        const fixedWorkout = await call("update_workout", {
+          id: workout.id,
+          changes: { duration_min: 45, perceived_intensity: null },
+        });
+        assertEquals(fixedWorkout.workout, {
+          id: workout.id,
+          type: "vélo",
+          duration_min: 45,
+          started_at: "2026-10-15 18:00",
+        });
+        const refused = await call("update_workout", { id: workout.id, changes: {} });
+        assertEquals(typeof refused.error, "string");
+
+        const deleted = await call("delete_entry", { kind: "meal", id: mealId });
+        assertEquals(deleted.deleted, {
+          kind: "meal",
+          id: mealId,
+          label: `Bol ${tag}`,
+          at: "2026-10-15 23:30",
+        });
+        const [items] = await sql`
+          select count(*)::int as n from public.meal_item where meal_id = ${mealId}`;
+        assertEquals([await count("meal"), items?.n], [1, 0]); // reste le repas d'œufs
+        const again = await call("delete_entry", { kind: "meal", id: mealId });
+        assertEquals(again.error, `Repas ${mealId} introuvable (déjà supprimé ?)`);
+
+        const after = await call("get_summary", { period: "day", date: "2026-10-15" });
+        assertEquals(
+          [after.meals, after.workout_minutes, after.weights[0].weight_kg],
+          [[], 45, 70.6],
+        );
+
+        await call("delete_entry", { kind: "workout", id: workout.id });
+        await call("delete_entry", { kind: "weight", id: weight.id });
+        assertEquals([await count("workout"), await count("body_measure")], [0, 1]);
+      });
+
       await t.step("aucune donnée de repas ou de poids dans les logs", () => {
         assertEquals(
-          logged.filter((line) => line.includes(tag) || line.includes("70.4")),
+          logged.filter(
+            (line) => line.includes(tag) || line.includes("70.4") || line.includes("70.6"),
+          ),
           [],
         );
       });
