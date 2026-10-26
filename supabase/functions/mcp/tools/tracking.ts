@@ -361,7 +361,7 @@ export function registerTrackingTools(server: McpServer, db: UserDb): void {
     {
       title: "Supprimer un repas, une séance ou une pesée",
       description:
-        "Supprime un repas (avec ses aliments), une séance ou une pesée, par son id (get_summary d'un jour). Toujours confirmer avec l'utilisateur avant d'appeler. Pour corriger un repas : le supprimer puis le ressaisir avec log_meal et une nouvelle idempotency_key. Le stock n'est pas modifié : le corriger avec update_item si besoin.",
+        "Supprime un repas (avec ses aliments), une séance ou une pesée, par son id (get_summary d'un jour). Toujours confirmer avec l'utilisateur avant d'appeler. Pour corriger un repas : le supprimer puis le ressaisir avec log_meal et une nouvelle idempotency_key. Le stock n'est pas modifié : le corriger avec update_item si besoin. La clé d'idempotence de l'entrée supprimée est libérée : ne jamais rejouer l'ancien appel log_*.",
       inputSchema: DeleteEntryInput,
       annotations: { destructiveHint: true },
     },

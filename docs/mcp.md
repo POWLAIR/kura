@@ -138,6 +138,7 @@ Les ids viennent de `get_summary` pour un jour, qui donne celui de chaque repas,
 - **`delete_entry`** (`kind` : `meal`, `workout` ou `weight`, et `id`) : supprimer un repas supprime aussi ses aliments (`on delete cascade`). Les mouvements de stock qui le référencent sont gardés, avec `meal_id` remis à null : le stock n'est pas remis à jour, il se corrige avec `update_item`. La description demande à Claude de confirmer avec l'utilisateur avant d'appeler.
 - **Corriger un repas** : le supprimer, puis le ressaisir avec `log_meal` et une nouvelle `idempotency_key`. Ses totaux dépendent de tous ses aliments, d'où l'absence de `update_meal`.
 - **`update_workout`, `update_weight`** : un champ absent garde sa valeur, `null` efface l'intensité ou les notes. Les schémas sont stricts et leurs champs portent le nom des colonnes ; les contraintes de la base (intensité de 1 à 5, poids positif) s'appliquent aussi.
+- **Idempotence** : la clé vit sur la ligne. Une fois l'entrée supprimée, rejouer l'ancien `log_*` la recréerait ; la description de `delete_entry` l'interdit. Garder une trace des clés supprimées serait surdimensionné en usage solo.
 - **Erreurs** : une entrée introuvable, déjà supprimée ou appartenant à un autre utilisateur (RLS), revient à Claude comme erreur du tool.
 
 ### `get_summary`
