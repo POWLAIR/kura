@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createFoodMatcher, type Food } from "./food-match.ts";
 import {
+  DeleteEntryInput,
   daysBetween,
   FoodConversionInput,
   LogMealInput,
@@ -10,6 +11,8 @@ import {
   periodRange,
   resolveMealItems,
   sumNutrition,
+  UpdateWeightInput,
+  UpdateWorkoutInput,
 } from "./tracking.ts";
 
 describe("schémas", () => {
@@ -53,6 +56,22 @@ describe("schémas", () => {
     [{ food_ref_id: 1, piece_weight_g: 60, unit: "g" }, false],
   ])("conversion %o : %s", (input, valid) => {
     expect(FoodConversionInput.safeParse(input).success).toBe(valid);
+  });
+
+  it("corrections : au moins un champ, seulement ceux de l'entrée", () => {
+    const workout = (changes: object) => UpdateWorkoutInput.safeParse({ id: 1, changes }).success;
+    expect(workout({ duration_min: 45 })).toBe(true);
+    expect(workout({ perceived_intensity: null, notes: null })).toBe(true); // effacés
+    expect(workout({})).toBe(false);
+    expect(workout({ weight_kg: 70 })).toBe(false); // champ d'une pesée
+    expect(workout({ perceived_intensity: 6 })).toBe(false);
+
+    const weight = (changes: object) => UpdateWeightInput.safeParse({ id: 1, changes }).success;
+    expect(weight({ weight_kg: 70.5 })).toBe(true);
+    expect(weight({ measured_at: "2026-10-16T08:00:00" })).toBe(false); // sans fuseau
+
+    expect(DeleteEntryInput.safeParse({ kind: "meal", id: 3 }).success).toBe(true);
+    expect(DeleteEntryInput.safeParse({ kind: "recipe", id: 3 }).success).toBe(false);
   });
 });
 

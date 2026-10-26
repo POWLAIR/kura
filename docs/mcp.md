@@ -96,6 +96,8 @@ Une saisie refusée par la base (article introuvable, unité incompatible…) re
 | `log_weight` | Pesée en kg |
 | `get_summary` | Résumé d'un jour ou d'une semaine (lundi-dimanche) |
 | `set_food_conversion` | Poids d'une pièce ou densité d'un aliment, donnés par l'utilisateur |
+| `delete_entry` | Supprime un repas, une séance ou une pesée |
+| `update_workout`, `update_weight` | Corrigent une séance ou une pesée |
 
 **Règles communes :**
 - **Entrées** : schémas Zod et logique pure dans `packages/core/src/tracking.ts`.
@@ -128,6 +130,16 @@ Ciqual ne fournit ni poids moyen par pièce ni densité : « 2 œufs » ou « 15
 - **Stockage** : la table `food_conversion`, sous RLS, une ligne par utilisateur et aliment. Ses valeurs priment sur `food_ref.piece_weight_g` et ne valent que pour cet utilisateur.
 - **Modification** : un champ absent garde sa valeur, `null` la retire. Une ligne sans valeur est supprimée.
 - **Recalcul** : la fonction SQL `set_food_conversion` reconvertit, depuis la quantité dite, tous les repas de l'utilisateur qui contiennent l'aliment en pièces ou en ml, puis recalcule leurs totaux (`refresh_meal`). Une valeur corrigée s'applique donc aussi aux repas passés ; une valeur retirée les rend de nouveau partiels. La réponse donne le nombre de repas recalculés (`meals_updated`).
+
+### Corrections
+
+Les ids viennent de `get_summary` pour un jour, qui donne celui de chaque repas, séance et pesée.
+
+- **`delete_entry`** (`kind` : `meal`, `workout` ou `weight`, et `id`) : supprimer un repas supprime aussi ses aliments (`on delete cascade`). Les mouvements de stock qui le référencent sont gardés, avec `meal_id` remis à null : le stock n'est pas remis à jour, il se corrige avec `update_item`. La description demande à Claude de confirmer avec l'utilisateur avant d'appeler.
+- **Corriger un repas** : le supprimer, puis le ressaisir avec `log_meal` et une nouvelle `idempotency_key`. Ses totaux dépendent de tous ses aliments, d'où l'absence de `update_meal`.
+- **`update_workout`, `update_weight`** : un champ absent garde sa valeur, `null` efface l'intensité ou les notes. Les schémas sont stricts et leurs champs portent le nom des colonnes ; les contraintes de la base (intensité de 1 à 5, poids positif) s'appliquent aussi.
+- **Idempotence** : la clé vit sur la ligne. Une fois l'entrée supprimée, rejouer l'ancien `log_*` la recréerait ; la description de `delete_entry` l'interdit. Garder une trace des clés supprimées serait surdimensionné en usage solo.
+- **Erreurs** : une entrée introuvable, déjà supprimée ou appartenant à un autre utilisateur (RLS), revient à Claude comme erreur du tool.
 
 ### `get_summary`
 
@@ -169,7 +181,7 @@ Pour Claude Code, `.mcp.json` déclare le serveur `kura-local`, avec la clé lue
 - **Avec base** :
   - `db_test.ts` vérifie que `asUser` applique la RLS et que les clés révoquées sont refusées ;
   - `tools/inventory_test.ts` déroule les tools d'inventaire de bout en bout avec le client MCP officiel.
-  - `tools/tracking_test.ts` déroule les tools de suivi : ambiguïté sans enregistrement, totaux et valeurs partielles, rejeux sans doublon, journées à l'heure de Paris, poids donné après coup et repas recalculé, aucune donnée dans les logs.
+  - `tools/tracking_test.ts` déroule les tools de suivi : ambiguïté sans enregistrement, totaux et valeurs partielles, rejeux sans doublon, journées à l'heure de Paris, poids donné après coup et repas recalculé, corrections et suppressions, aucune donnée dans les logs.
 
   La CI les lance contre sa base ; en local, il suffit de définir `KURA_TEST_DB_URL` :
 
