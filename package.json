@@ -23,8 +23,8 @@
     "mcp:key": "pnpm --filter @kura/scripts mcp:key"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
-    "supabase": "^2.120.0",
+    "@biomejs/biome": "^2.6.4",
+    "supabase": "^2.122.0",
     "typescript": "^7.0.2"
   },
   "devEngines": {
