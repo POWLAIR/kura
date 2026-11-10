@@ -50,6 +50,7 @@ apps/mobile/
 ```
 
 - **Session** : gardée sur l'appareil par supabase-js (AsyncStorage sur Android, `localStorage` sur le web) et rafraîchie quand l'app est au premier plan.
+- **Opérations métier** (courses, repas, séances…) : par la fonction `api`, qui exécute le même code que les tools MCP (voir `docs/api.md`). Les lectures simples se font en direct avec supabase-js.
 - **`packages/core`** : importé tel quel (`@kura/core`), comme dans le serveur MCP. Metro résout ses imports en `.ts` sans configuration.
 - **Couleurs** : ni rouge ni vert pour porter un sens, comme le demande la conception.
 - **Web** : `web.output` vaut `single` (une seule page, sans rendu côté serveur), ce qui suffit pour la PWA.

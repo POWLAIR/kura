@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import { asUser, connect, findCaller } from "./db.ts";
+import { asUser, connect, findCaller } from "../_shared/db.ts";
 
 // Test d'intégration : base locale (pnpm db:start) ou base de la CI.
 const url = Deno.env.get("KURA_TEST_DB_URL");

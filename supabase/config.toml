@@ -417,3 +417,8 @@ enabled = true
 # Serveur MCP : authentifié par clé API (Authorization: Bearer kura_…), pas par JWT Supabase.
 [functions.mcp]
 verify_jwt = false
+
+# API de l'app : jeton de session Supabase de l'utilisateur, vérifié par la plateforme puis
+# par la fonction (voir docs/api.md).
+[functions.api]
+verify_jwt = true
