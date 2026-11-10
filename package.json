@@ -14,6 +14,7 @@
     "functions:check": "for f in supabase/functions/*/deno.json; do deno check --config \"$f\" \"$(dirname \"$f\")\" || exit 1; done",
     "functions:test": "for f in supabase/functions/*/deno.json; do deno test --config \"$f\" --allow-env --allow-net \"$(dirname \"$f\")\" || exit 1; done",
     "functions:deploy": "supabase functions deploy --use-api",
+    "app": "pnpm --filter @kura/mobile start",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:new": "supabase migration new",

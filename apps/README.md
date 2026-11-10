@@ -1,3 +1,3 @@
 # apps
 
-`mobile/` : app Expo (Android + PWA), créée en phase 2 avec `pnpm create expo-app apps/mobile`.
+`mobile/` : app Expo (Android + web). Lancement, variables d'environnement et structure : voir `docs/app.md`.

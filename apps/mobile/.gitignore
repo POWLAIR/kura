@@ -1,0 +1,6 @@
+# Générés par Expo (le reste est dans le .gitignore de la racine)
+expo-env.d.ts
+web-build/
+.metro-health-check*
+.kotlin/
+*.tsbuildinfo

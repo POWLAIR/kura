@@ -7,13 +7,13 @@ Outil personnel qui relie inventaire de cuisine, recettes, suivi alimentation/sp
 ## Structure
 
 ```
-apps/mobile/          App Expo (phase 2, pas encore créée)
+apps/mobile/          App Expo (Android + web), Expo Router — voir docs/app.md
 packages/core/        Schémas Zod + logique métier partagés app ↔ MCP (nutrients, food-match, purchase, tracking)
 scripts/              Imports ponctuels exécutés en local (Ciqual, Notion)
 supabase/migrations/  Schéma Postgres, RLS, fonctions RPC (cook_recipe…)
 supabase/functions/   Edge Functions Deno : mcp (voir docs/mcp.md), recipes, notion-export…
 supabase/tests/       Tests pgTAP (SQL + RLS)
-docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP ; deploiement.md)
+docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP ; app.md : app Expo ; deploiement.md)
 ```
 
 ## Commandes
@@ -22,6 +22,7 @@ docs/                 Conception et décisions (ciqual.md, notion.md : imports ;
 pnpm check            # lint + typecheck + tests — doit passer avant tout commit
 pnpm format           # Biome --write
 pnpm test             # Vitest
+pnpm app              # app Expo (Expo Go sur Android, « w » pour le web) — voir docs/app.md
 pnpm db:start         # Supabase local (Docker)
 pnpm db:new <nom>     # nouvelle migration
 pnpm db:reset         # rejoue toutes les migrations + seed
@@ -49,6 +50,7 @@ KURA_ENV_FILE=.env.production pnpm <script>  # scripts contre la base déployée
 
 - TypeScript strict partout ; Deno pour `supabase/functions` (`pnpm exec deno`, version épinglée par pnpm), Node 22+ (`.nvmrc`) ailleurs — `supabase-js` ne fonctionne plus en Node 20.
 - `packages/core` est importé par Deno : imports relatifs avec extension `.ts`, pas de dépendance propre à Node.
+- App Expo : seules les variables `EXPO_PUBLIC_*` y sont embarquées, donc la clé publique uniquement ; les écrans passent par le client de `src/lib/supabase.ts` (session de l'utilisateur, RLS).
 - Tools MCP : toujours via `db` (`asUser`, RLS de l'utilisateur), jamais via la connexion brute.
 - Code et identifiants en anglais (`inventory_item`, `cookRecipe`), textes visibles par l'utilisateur en français.
 - Migrations : jamais modifier une migration mergée (voir skill `new-migration`).
@@ -58,4 +60,6 @@ KURA_ENV_FILE=.env.production pnpm <script>  # scripts contre la base déployée
 
 ## Phase en cours
 
-**Phase 1 — Fondations** : schéma + RLS, import Ciqual, import Notion, serveur MCP (Streamable HTTP, Edge Function), auth par clé API. Critère de fin : une semaine de suivi via Claude seul.
+**Phase 2 — App de base** : Expo Android, inventaire, scan Open Food Facts, journal, export Notion, export des données. Critère de fin : courses rangées par scan.
+
+La phase 1 (fondations, serveur MCP, clé API) est terminée : son critère, une semaine de suivi via Claude seul, est rempli.
