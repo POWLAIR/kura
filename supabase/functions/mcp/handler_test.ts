@@ -111,6 +111,7 @@ for (const [era, negotiation] of Object.entries({
       "log_meal",
       "log_weight",
       "log_workout",
+      "remove_item",
       "set_food_conversion",
       "update_item",
       "update_weight",

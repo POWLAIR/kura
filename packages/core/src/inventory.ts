@@ -141,6 +141,13 @@ export const UpdateItemInput = z.object({
   changes: ItemChanges,
 });
 
+export type UpdateItemInput = z.infer<typeof UpdateItemInput>;
+
+export const RemoveItemInput = z.object({
+  item_id: Id.describe("Id de l'article (voir get_inventory)"),
+});
+export type RemoveItemInput = z.infer<typeof RemoveItemInput>;
+
 // Changements prêts pour public.update_item : unités ramenées à g, ml ou pièce. Une
 // quantité sans unité est dans l'unité actuelle de l'article.
 export type StockChanges = { [key: string]: string | number | null | undefined };
