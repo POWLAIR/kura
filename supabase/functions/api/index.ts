@@ -1,7 +1,8 @@
 // API de l'app Kura : Edge Function Supabase, JWT de l'utilisateur. Voir docs/api.md.
+
+import { parseOrigins } from "../_shared/cors.ts";
 import { asUser, connect } from "../_shared/db.ts";
-import { authUserFinder } from "./auth.ts";
-import { parseOrigins } from "./cors.ts";
+import { authUserFinder } from "../_shared/session.ts";
 import { createHandler } from "./handler.ts";
 
 const dbUrl = Deno.env.get("SUPABASE_DB_URL");

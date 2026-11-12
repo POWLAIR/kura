@@ -422,3 +422,7 @@ verify_jwt = false
 # par la fonction (voir docs/api.md).
 [functions.api]
 verify_jwt = true
+
+# Produit Open Food Facts par code-barres : même authentification que l'API de l'app.
+[functions.off-product]
+verify_jwt = true

@@ -118,11 +118,14 @@ Une saisie refusée par la base (article introuvable, unité incompatible…) re
    - pièces : avec le poids d'une pièce donné par l'utilisateur (`food_conversion`), sinon celui de `food_ref` (`piece_weight_g`) ;
    - ml : avec la densité donnée par l'utilisateur ;
    - sinon `null`, jamais d'estimation.
-3. `meal_totals` calcule les totaux pour toutes les clés (colonnes principales, `micronutrients`, `nutrient_details`), sur les aliments convertis en grammes : `{ "values": {…}, "incomplete": [clés] }`.
+3. `meal_totals` calcule les totaux pour toutes les clés (colonnes principales, `micronutrients`, `nutrient_details`), sur les aliments comptés : `{ "values": {…}, "incomplete": [clés] }`. La quantité comptée suit la base des valeurs de l'aliment (`nutrition_amount`) :
+   - valeurs pour 100 g (Ciqual, la plupart des produits) : les grammes ;
+   - valeurs pour 100 ml (produit vendu au volume, voir `docs/open-food-facts.md`) : les ml dits, tels quels ; pour une quantité dite en g ou en pièces, les grammes divisés par la densité de l'utilisateur ;
+   - base inconnue : l'aliment n'est jamais compté.
    - Une clé absente de tous les aliments est « non renseignée ».
    - Une clé absente de certains aliments seulement est dans `incomplete` : son total est un minimum.
-4. `meal.partial_values` vaut vrai dès qu'un aliment n'a pas de référence ou n'a pas pu être converti en grammes.
-5. La réponse liste dans `missing_conversions` les aliments rattachés à `food_ref` mais non convertis (`missingConversions` dans `packages/core`), avec la valeur à demander : `piece_weight_g` ou `density_g_ml`.
+4. `meal.partial_values` vaut vrai dès qu'un aliment n'est pas compté : sans référence, sans conversion possible, ou de base inconnue. Dans la réponse, un tel aliment porte `counted: false`.
+5. La réponse liste dans `missing_conversions` les aliments rattachés à `food_ref` mais non comptés faute d'une valeur (`missingConversions` dans `packages/core`), avec la valeur à demander : `piece_weight_g` ou `density_g_ml`.
 
 ### `set_food_conversion` : poids et densités de l'utilisateur
 

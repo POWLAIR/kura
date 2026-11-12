@@ -1,7 +1,7 @@
 import { assertEquals, assertRejects } from "@std/assert";
+import { parseOrigins } from "../_shared/cors.ts";
 import { asUser, connect } from "../_shared/db.ts";
-import { AuthUnavailableError, authUserFinder, bearerToken } from "./auth.ts";
-import { parseOrigins } from "./cors.ts";
+import { AuthUnavailableError, authUserFinder, bearerToken } from "../_shared/session.ts";
 import { createHandler, type HandlerDeps } from "./handler.ts";
 
 const BASE = "http://localhost/functions/v1/api";
