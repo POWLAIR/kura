@@ -47,6 +47,7 @@ const OFF_FIELDS = [
   "quantity",
   "product_quantity",
   "product_quantity_unit",
+  "serving_quantity_unit",
   "nutriments",
 ] as const;
 
@@ -140,8 +141,9 @@ export type OffFood = {
   // Contenance de l'emballage, quand elle est en g ou en ml.
   package_quantity: number | null;
   package_unit: "g" | "ml" | null;
-  // Les valeurs sont pour 100 g, ou pour 100 ml quand le produit se vend au volume.
-  per_100_unit: "g" | "ml";
+  // Base des valeurs : pour 100 g, pour 100 ml quand le produit se vend au volume, ou null
+  // quand la fiche ne permet pas de le savoir (l'aliment n'est alors pas compté).
+  per_100_unit: "g" | "ml" | null;
   micronutrients: Partial<Record<MicronutrientKey, number>>;
   nutrient_details: Partial<Record<NutrientDetailKey, number>>;
 } & Record<MainNutrientKey, number | null>;
@@ -207,7 +209,8 @@ export function mapOffProduct(ean: Ean, payload: unknown): OffFood | null {
     brand: text(product.brands),
     package_quantity: hasPackage ? packageQuantity : null,
     package_unit: hasPackage ? packageUnit : null,
-    per_100_unit: packageUnit === "ml" ? "ml" : "g",
+    // Jamais devinée : l'unité de la contenance, sinon celle de la portion, sinon inconnue.
+    per_100_unit: packageUnit ?? unit(product.serving_quantity_unit),
     ...main,
     micronutrients: collect(OFF_MICRONUTRIENTS),
     nutrient_details: collect(OFF_DETAILS),

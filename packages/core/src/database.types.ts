@@ -87,14 +87,14 @@ isOneToOne: false
                   ]
                 },"food_ref": {
                   Row: {
-                    "brand": string | null,"carbs_g": number | null,"code": string,"created_at": string,"energy_kcal": number | null,"fat_g": number | null,"fiber_g": number | null,"id": number,"micronutrients": NonNullable<Json>,"name": string,"nutrient_details": NonNullable<Json>,"package_quantity": number | null,"package_unit": Database["public"]['Enums']["quantity_unit"] | null,"per_100_unit": Database["public"]['Enums']["quantity_unit"],"piece_weight_g": number | null,"protein_g": number | null,"salt_g": number | null,"saturated_fat_g": number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g": number | null,"updated_at": string
+                    "brand": string | null,"carbs_g": number | null,"code": string,"created_at": string,"energy_kcal": number | null,"fat_g": number | null,"fiber_g": number | null,"id": number,"micronutrients": NonNullable<Json>,"name": string,"nutrient_details": NonNullable<Json>,"package_quantity": number | null,"package_unit": Database["public"]['Enums']["quantity_unit"] | null,"per_100_unit": Database["public"]['Enums']["quantity_unit"] | null,"piece_weight_g": number | null,"protein_g": number | null,"salt_g": number | null,"saturated_fat_g": number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g": number | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "brand"?: string | null,"carbs_g"?: number | null,"code": string,"created_at"?: string,"energy_kcal"?: number | null,"fat_g"?: number | null,"fiber_g"?: number | null,"id"?: never,"micronutrients"?: NonNullable<Json>,"name": string,"nutrient_details"?: NonNullable<Json>,"package_quantity"?: number | null,"package_unit"?: Database["public"]['Enums']["quantity_unit"] | null,"per_100_unit"?: Database["public"]['Enums']["quantity_unit"],"piece_weight_g"?: number | null,"protein_g"?: number | null,"salt_g"?: number | null,"saturated_fat_g"?: number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g"?: number | null,"updated_at"?: string
+                    "brand"?: string | null,"carbs_g"?: number | null,"code": string,"created_at"?: string,"energy_kcal"?: number | null,"fat_g"?: number | null,"fiber_g"?: number | null,"id"?: never,"micronutrients"?: NonNullable<Json>,"name": string,"nutrient_details"?: NonNullable<Json>,"package_quantity"?: number | null,"package_unit"?: Database["public"]['Enums']["quantity_unit"] | null,"per_100_unit"?: Database["public"]['Enums']["quantity_unit"] | null,"piece_weight_g"?: number | null,"protein_g"?: number | null,"salt_g"?: number | null,"saturated_fat_g"?: number | null,"source": Database["public"]['Enums']["food_source"],"sugars_g"?: number | null,"updated_at"?: string
                   }
                   Update: {
-                    "brand"?: string | null,"carbs_g"?: number | null,"code"?: string,"created_at"?: string,"energy_kcal"?: number | null,"fat_g"?: number | null,"fiber_g"?: number | null,"id"?: never,"micronutrients"?: NonNullable<Json>,"name"?: string,"nutrient_details"?: NonNullable<Json>,"package_quantity"?: number | null,"package_unit"?: Database["public"]['Enums']["quantity_unit"] | null,"per_100_unit"?: Database["public"]['Enums']["quantity_unit"],"piece_weight_g"?: number | null,"protein_g"?: number | null,"salt_g"?: number | null,"saturated_fat_g"?: number | null,"source"?: Database["public"]['Enums']["food_source"],"sugars_g"?: number | null,"updated_at"?: string
+                    "brand"?: string | null,"carbs_g"?: number | null,"code"?: string,"created_at"?: string,"energy_kcal"?: number | null,"fat_g"?: number | null,"fiber_g"?: number | null,"id"?: never,"micronutrients"?: NonNullable<Json>,"name"?: string,"nutrient_details"?: NonNullable<Json>,"package_quantity"?: number | null,"package_unit"?: Database["public"]['Enums']["quantity_unit"] | null,"per_100_unit"?: Database["public"]['Enums']["quantity_unit"] | null,"piece_weight_g"?: number | null,"protein_g"?: number | null,"salt_g"?: number | null,"saturated_fat_g"?: number | null,"source"?: Database["public"]['Enums']["food_source"],"sugars_g"?: number | null,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -295,6 +295,9 @@ isOneToOne: false
                            },
 "meal_totals":
 { Args: { "p_meal_id": number }; Returns: Json
+                           },
+"nutrition_amount":
+{ Args: { "p_density_g_ml": number,"p_per_100_unit": Database["public"]['Enums']["quantity_unit"],"p_quantity": number,"p_quantity_g": number,"p_unit": Database["public"]['Enums']["quantity_unit"] }; Returns: number
                            },
 "refresh_meal":
 { Args: { "p_meal_id": number }; Returns: undefined

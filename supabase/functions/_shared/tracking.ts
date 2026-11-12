@@ -66,11 +66,17 @@ async function mealView(tx: Tx, mealId: number) {
       to_char(m.eaten_at at time zone ${TIMEZONE}, 'HH24:MI') as time,
       coalesce(json_agg(json_build_object(
         'name', coalesce(mi.name, f.name), 'food', f.name, 'food_ref_id', mi.food_ref_id,
-        'quantity', mi.quantity, 'unit', mi.unit, 'grams', mi.quantity_g
+        'quantity', mi.quantity, 'unit', mi.unit, 'grams', mi.quantity_g,
+        -- Seulement ce qui sort de l'ordinaire : valeurs pour 100 ml, aliment non compté.
+        'per_100_unit', nullif(f.per_100_unit::text, 'g'),
+        'counted', nullif(public.nutrition_amount(
+          f.per_100_unit, mi.quantity, mi.unit, mi.quantity_g, c.density_g_ml
+        ) is not null, true)
       ) order by mi.id) filter (where mi.id is not null), '[]') as items
     from public.meal m
     left join public.meal_item mi on mi.meal_id = m.id
     left join public.food_ref f on f.id = mi.food_ref_id
+    left join public.food_conversion c on c.food_ref_id = mi.food_ref_id
     where m.id = ${mealId}
     group by m.id`;
   if (!meal) throw new Error("Repas introuvable");
