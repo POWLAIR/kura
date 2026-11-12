@@ -45,6 +45,7 @@ apps/mobile/
     (tabs)/               Les quatre onglets : Accueil, Cuisine, Recettes, Journal
     (tabs)/cuisine/       Inventaire, ajout d'un article, fiche d'un article
   src/auth/session.tsx    Session Supabase Auth, partagée par contexte
+  src/auth/               Stockage chiffré de la session (encrypted-storage.ts, session-storage.ts)
   src/lib/supabase.ts     Client Supabase typé avec database.types.ts
   src/lib/api.ts          Appel d'une opération métier (fonction api)
   src/inventory/          Lectures de l'inventaire et logique des formulaires (testée avec Vitest)
@@ -53,7 +54,7 @@ apps/mobile/
   src/theme.ts            Couleurs (clair et sombre) et espacements
 ```
 
-- **Session** : gardée sur l'appareil par supabase-js (AsyncStorage sur Android, `localStorage` sur le web) et rafraîchie quand l'app est au premier plan.
+- **Session** : gardée sur l'appareil par supabase-js et rafraîchie quand l'app est au premier plan. Sur Android, elle est chiffrée (`src/auth/encrypted-storage.ts`) : une clé, renouvelée à chaque écriture, est dans le stockage sûr de l'appareil (Keystore, via `expo-secure-store`) ; la session, trop grande pour lui, est dans AsyncStorage, chiffrée (AES-256) et scellée : le sceau est vérifié avant tout déchiffrement. Une clé perdue ou une valeur altérée ramène à l'écran de connexion. Une session en clair d'une version précédente est relue une fois, puis chiffrée. Sur le web, elle reste dans `localStorage` : un navigateur n'a pas de stockage sûr équivalent.
 - **Opérations métier** (courses, repas, séances…) : par la fonction `api`, qui exécute le même code que les tools MCP (voir `docs/api.md`). Les lectures simples se font en direct avec supabase-js.
 - **`packages/core`** : importé tel quel (`@kura/core`), comme dans le serveur MCP. Metro résout ses imports en `.ts` sans configuration.
 - **Couleurs** : ni rouge ni vert pour porter un sens, comme le demande la conception.
