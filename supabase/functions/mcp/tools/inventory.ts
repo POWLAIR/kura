@@ -3,11 +3,12 @@ import { OPERATIONS } from "../../_shared/operations.ts";
 import type { UserDb } from "../server.ts";
 import { ok, userErrors } from "./result.ts";
 
-// Tools d'inventaire (issue #6) : get_inventory, add_items, update_item, get_shopping_list.
+// Tools d'inventaire (issue #6) : get_inventory, add_items, update_item, get_shopping_list ;
+// remove_item (issue #24).
 // Ici, seulement ce que lit Claude (titres, descriptions) ; la logique est dans _shared,
 // partagée avec l'API de l'app.
 
-const { get_inventory, add_items, update_item, get_shopping_list } = OPERATIONS;
+const { get_inventory, add_items, update_item, remove_item, get_shopping_list } = OPERATIONS;
 
 export function registerInventoryTools(server: McpServer, db: UserDb): void {
   server.registerTool(
@@ -43,6 +44,18 @@ export function registerInventoryTools(server: McpServer, db: UserDb): void {
       annotations: { idempotentHint: true },
     },
     (input) => userErrors(async () => ok(await db((tx) => update_item.run(tx, input)))),
+  );
+
+  server.registerTool(
+    "remove_item",
+    {
+      title: "Retirer un article de l'inventaire",
+      description:
+        "Retire définitivement un article de l'inventaire (id via get_inventory) : il n'est plus suivi et son historique de mouvements est supprimé. Toujours confirmer avec l'utilisateur avant d'appeler. Pour un article simplement terminé, préférer update_item (quantité 0, ou niveau presque_vide) : il reste dans l'inventaire et dans la liste « À racheter » s'il a un seuil.",
+      inputSchema: remove_item.input,
+      annotations: { destructiveHint: true },
+    },
+    (input) => userErrors(async () => ok(await db((tx) => remove_item.run(tx, input)))),
   );
 
   server.registerTool(

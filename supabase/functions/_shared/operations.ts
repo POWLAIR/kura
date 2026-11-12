@@ -6,6 +6,7 @@ import {
   LogMealInput,
   LogWeightInput,
   LogWorkoutInput,
+  RemoveItemInput,
   SummaryInput,
   UpdateItemInput,
   UpdateWeightInput,
@@ -13,7 +14,13 @@ import {
 } from "@kura/core";
 import { z } from "zod";
 import type { Tx } from "./db.ts";
-import { addPurchases, getInventory, getShoppingList, updateItem } from "./inventory.ts";
+import {
+  addPurchases,
+  getInventory,
+  getShoppingList,
+  removeItem,
+  updateItem,
+} from "./inventory.ts";
 import {
   deleteEntry,
   getSummary,
@@ -40,6 +47,7 @@ export const OPERATIONS = {
   get_inventory: operation(InventoryQuery, getInventory),
   add_items: operation(AddItemsInput, addPurchases),
   update_item: operation(UpdateItemInput, updateItem),
+  remove_item: operation(RemoveItemInput, removeItem),
   get_shopping_list: operation(z.object({}), (tx) => getShoppingList(tx)),
   log_meal: operation(LogMealInput, logMeal),
   set_food_conversion: operation(FoodConversionInput, setFoodConversion),

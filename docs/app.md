@@ -43,8 +43,12 @@ apps/mobile/
     _layout.tsx           Garde de session : connexion sans session, onglets avec
     sign-in.tsx           Connexion par email et mot de passe
     (tabs)/               Les quatre onglets : Accueil, Cuisine, Recettes, Journal
+    (tabs)/cuisine/       Inventaire, ajout d'un article, fiche d'un article
   src/auth/session.tsx    Session Supabase Auth, partagée par contexte
   src/lib/supabase.ts     Client Supabase typé avec database.types.ts
+  src/lib/api.ts          Appel d'une opération métier (fonction api)
+  src/inventory/          Lectures de l'inventaire et logique des formulaires (testée avec Vitest)
+  src/components/ui.tsx   Boutons, champs, choix en pastilles, messages
   src/lib/env.ts          Lecture et contrôle des variables publiques
   src/theme.ts            Couleurs (clair et sombre) et espacements
 ```
@@ -54,6 +58,16 @@ apps/mobile/
 - **`packages/core`** : importé tel quel (`@kura/core`), comme dans le serveur MCP. Metro résout ses imports en `.ts` sans configuration.
 - **Couleurs** : ni rouge ni vert pour porter un sens, comme le demande la conception.
 - **Web** : `web.output` vaut `single` (une seule page, sans rendu côté serveur), ce qui suffit pour la PWA.
+
+## Onglet Cuisine
+
+- **Liste** : lue directement dans la vue `inventory_status`, regroupée par emplacement puis par catégorie (`groupInventory` de `packages/core`). Une péremption à trois jours ou moins est mise en avant par une étiquette, sans rouge ni vert ; « À racheter » filtre les articles sous leur seuil.
+- **Ajouter un article** : texte libre envoyé à l'opération `add_items`, donc avec les règles du tool MCP (`planPurchase`) : un article déjà en stock est réapprovisionné, sinon il est créé. Une ambiguïté se tranche à l'écran : aliment de référence parmi les candidats, article existant, ou « aucun ». Sans quantité, l'article est suivi en niveau.
+- **Fiche d'un article** : quantité ou niveau, seuil de rachat, date, emplacement, catégorie, aliment de référence (recherche par nom dans `food_ref`). L'enregistrement passe par `update_item` et n'envoie que les champs modifiés ; un changement d'unité ou de mode de suivi est signalé avant de revenir à la liste.
+- **Retirer un article** : opération `remove_item`, après confirmation. L'article quitte l'inventaire avec son historique de mouvements.
+- **Dates** : saisies à la française (`24/12`, `24/12/2026`), converties par `parseDateInput`.
+
+Les saisies sont validées par les schémas Zod de `packages/core` (`PurchaseItem`, `ItemChanges`) avant l'envoi, puis à nouveau par la fonction.
 
 ## Vérifications
 
