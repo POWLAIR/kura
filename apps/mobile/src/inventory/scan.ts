@@ -169,19 +169,13 @@ export function purchasesOf(lines: ScanLine[]): FormResult<PurchaseItem[]> {
 }
 
 // Après l'envoi : les lignes rangées disparaissent ; celles qu'add_items a jugées ambiguës
-// restent, avec de quoi trancher. Les ambiguïtés reviennent dans l'ordre des lignes, sous
-// le nom envoyé.
-export function remainingLines(lines: ScanLine[], result: AddItemsResult): ScanLine[] {
-  const pending = [...result.ambiguous];
-  const remaining: ScanLine[] = [];
-  for (const line of lines) {
-    const sent = line.existing?.name ?? line.name;
-    const index = pending.findIndex((ambiguity) => ambiguity.name === sent);
-    if (index === -1) continue;
-    const [ambiguity] = pending.splice(index, 1);
-    remaining.push({ ...line, ambiguity: ambiguity ?? null, choice: null });
-  }
-  return remaining;
+// restent, avec de quoi trancher. Chaque ambiguïté porte la position de son article dans la
+// liste envoyée : deux lignes de même nom ne se confondent pas.
+export function remainingLines(sent: ScanLine[], result: AddItemsResult): ScanLine[] {
+  return result.ambiguous.flatMap((ambiguity) => {
+    const line = sent[ambiguity.index];
+    return line ? [{ ...line, ambiguity, choice: null }] : [];
+  });
 }
 
 export type ScanSummary = { created: string[]; restocked: string[]; noLongerToRestock: string[] };

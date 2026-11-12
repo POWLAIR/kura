@@ -23,7 +23,7 @@ import {
 import { useInventory } from "@/inventory/use-inventory";
 import { callApi, callOffProduct } from "@/lib/api";
 import { errorMessage } from "@/lib/api-error";
-import { newIdempotencyKey } from "@/lib/idempotency";
+import { createKeyring } from "@/lib/idempotency";
 import { spacing, usePalette } from "@/theme";
 
 type OffAnswer = { found: true; food: ScannedFood } | { found: false; ean: string };
@@ -53,7 +53,13 @@ function LineCard(props: {
   return (
     <View
       accessibilityLabel={`Ligne ${line.name}`}
-      style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}
+      // Pendant l'envoi, la ligne est figée : une retouche serait perdue.
+      pointerEvents={props.disabled ? "none" : "auto"}
+      style={[
+        styles.card,
+        { backgroundColor: palette.surface, borderColor: palette.border },
+        props.disabled && { opacity: 0.6 },
+      ]}
     >
       <View style={styles.cardHead}>
         <Text style={[styles.name, { color: palette.text }]}>
@@ -174,12 +180,14 @@ export default function ScannerScreen() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
-  const [key, setKey] = useState(() => newIdempotencyKey("scan"));
+  const [keyring] = useState(() => createKeyring("scan"));
   const [summary, setSummary] = useState<ScanSummary | null>(null);
   const seen = useRef(new Map<string, number>());
   const manualCount = useRef(0);
   // Codes déjà dans la liste, ou en cours de recherche.
   const keys = useRef(new Set<string>());
+  // Relectures d'un code dont le produit est encore recherché : appliquées à son arrivée.
+  const earlyRescans = useRef(new Map<string, number>());
 
   const change = (lineKey: string, changes: Partial<ScanLine>) =>
     setLines((previous) =>
@@ -199,17 +207,23 @@ export default function ScannerScreen() {
     setMessage(null);
 
     // Déjà dans la liste : un emballage de plus.
+    if (earlyRescans.current.has(ean)) {
+      earlyRescans.current.set(ean, (earlyRescans.current.get(ean) ?? 0) + 1);
+      return;
+    }
     if (keys.current.has(ean)) {
       setLines((previous) => previous.map((line) => (line.key === ean ? rescanned(line) : line)));
       return;
     }
     keys.current.add(ean);
+    earlyRescans.current.set(ean, 0);
 
     setLooking((count) => count + 1);
     try {
       const answer = await callOffProduct<OffAnswer>(ean);
       if (answer.found) {
-        const line = lineFromProduct(answer.food, inventory.items);
+        let line = lineFromProduct(answer.food, inventory.items);
+        for (let i = earlyRescans.current.get(ean) ?? 0; i > 0; i--) line = rescanned(line);
         setLines((previous) => [line, ...previous]);
       } else {
         keys.current.delete(ean);
@@ -223,6 +237,7 @@ export default function ScannerScreen() {
       keys.current.delete(ean);
       setMessage(errorMessage(error));
     } finally {
+      earlyRescans.current.delete(ean);
       setLooking((count) => count - 1);
     }
   }
@@ -236,7 +251,9 @@ export default function ScannerScreen() {
   }
 
   async function storeAll() {
-    const purchases = purchasesOf(lines);
+    // La liste telle qu'elle part : ce qui s'y ajoute pendant l'envoi reste à l'écran.
+    const sent = lines;
+    const purchases = purchasesOf(sent);
     if (!purchases.ok) {
       setMessage(purchases.message);
       return;
@@ -246,14 +263,16 @@ export default function ScannerScreen() {
     try {
       const result = await callApi<AddItemsResult>("add_items", {
         items: purchases.value,
-        idempotency_key: key,
+        // Même liste rejouée après une coupure : même clé. Liste retouchée : nouvelle clé.
+        idempotency_key: keyring.keyFor(purchases.value),
       });
-      // Une clé par envoi : ce qui reste ambigu repartira avec une nouvelle clé.
-      setKey(newIdempotencyKey("scan"));
+      keyring.reset();
+      const remaining = remainingLines(sent, result);
+      const kept = new Set(remaining.map((line) => line.key));
+      const sentKeys = new Set(sent.map((line) => line.key));
+      for (const line of sent) if (!kept.has(line.key)) keys.current.delete(line.key);
       setSummary((previous) => mergeSummaries(previous, summaryOf(result, inventory.items)));
-      const remaining = remainingLines(lines, result);
-      keys.current = new Set(remaining.map((line) => line.key));
-      setLines(remaining);
+      setLines((previous) => [...previous.filter((line) => !sentKeys.has(line.key)), ...remaining]);
       await inventory.reload();
     } catch (error) {
       setMessage(errorMessage(error));
