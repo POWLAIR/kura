@@ -70,6 +70,20 @@ describe("parseDateInput", () => {
     expect(parseDateInput("5/1", TODAY)).toBe("2027-01-05");
   });
 
+  it("sans année, une date passée depuis peu reste dans l'année en cours", () => {
+    expect(parseDateInput("10/11", TODAY)).toBe("2026-11-10");
+    expect(parseDateInput("13/10", TODAY)).toBe("2026-10-13"); // il y a 30 jours
+    expect(parseDateInput("12/10", TODAY)).toBe("2027-10-12"); // il y a 31 jours
+    expect(parseDateInput("28/12", "2027-01-03")).toBe("2026-12-28"); // à cheval sur deux années
+    expect(expiryLabel(parseDateInput("10/11", TODAY), TODAY)).toBe("Périmé depuis 2 jours");
+  });
+
+  it("sans année, un 29 février est le prochain qui existe", () => {
+    expect(parseDateInput("29/02", TODAY)).toBe("2028-02-29");
+    expect(parseDateInput("29/02", "2028-03-05")).toBe("2028-02-29"); // passé de peu
+    expect(parseDateInput("29/02/2027", TODAY)).toBeNull();
+  });
+
   it("refuse ce qui n'est pas une date", () => {
     for (const input of ["", "demain", "31/02/2027", "12/13", "2026-13-01", "1/2/3/4"]) {
       expect(parseDateInput(input, TODAY), input).toBeNull();

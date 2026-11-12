@@ -140,32 +140,35 @@ export function expiryLabel(expiresOn: string | null | undefined, today: string)
 // Saisie d'une date
 // ---------------------------------------------------------------------------
 
+// Sans année, une date passée depuis moins longtemps que cela reste dans l'année en cours :
+// « 10/11 » tapé le 12 novembre désigne un produit déjà périmé, pas novembre prochain.
+export const RECENT_PAST_DAYS = 30;
+
 // Date tapée à la française : « 12/11 », « 12/11/26 », « 12/11/2026 », ou AAAA-MM-JJ.
-// Sans année, c'est la prochaine occurrence à partir de `today`. Renvoie AAAA-MM-JJ, ou
-// null si la saisie n'est pas une date.
+// Sans année, c'est la prochaine occurrence à partir de `today`, ou une date passée depuis
+// peu (RECENT_PAST_DAYS). Renvoie AAAA-MM-JJ, ou null si la saisie n'est pas une date.
 export function parseDateInput(input: string, today: string): string | null {
   const text = input.trim();
   const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (iso) return toIsoDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+
   const french = /^(\d{1,2})[/.\s-](\d{1,2})(?:[/.\s-](\d{2}|\d{4}))?$/.exec(text);
-  let year: number;
-  let month: number;
-  let day: number;
-  if (iso) {
-    [year, month, day] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
-  } else if (french) {
-    [day, month] = [Number(french[1]), Number(french[2])];
-    const currentYear = Number(today.slice(0, 4));
-    if (french[3] === undefined) {
-      year = currentYear;
-      const thisYear = toIsoDate(year, month, day);
-      if (thisYear !== null && thisYear < today) year += 1;
-    } else {
-      year = french[3].length === 2 ? 2000 + Number(french[3]) : Number(french[3]);
-    }
-  } else {
-    return null;
+  if (!french) return null;
+  const [day, month] = [Number(french[1]), Number(french[2])];
+  if (french[3] !== undefined) {
+    const year = french[3].length === 2 ? 2000 + Number(french[3]) : Number(french[3]);
+    return toIsoDate(year, month, day);
   }
-  return toIsoDate(year, month, day);
+
+  const earliest = new Date(Date.parse(today) - RECENT_PAST_DAYS * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+  // Jusqu'à quatre ans plus tard : un 29 février n'existe pas tous les ans.
+  for (let year = Number(earliest.slice(0, 4)); year <= Number(today.slice(0, 4)) + 4; year++) {
+    const date = toIsoDate(year, month, day);
+    if (date !== null && date >= earliest) return date;
+  }
+  return null;
 }
 
 function toIsoDate(year: number, month: number, day: number): string | null {
