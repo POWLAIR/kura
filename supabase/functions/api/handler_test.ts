@@ -241,6 +241,49 @@ Deno.test({
         );
       });
 
+      await t.step(
+        "lecture sans corps : entrée vide, comme functions.invoke sans body",
+        async () => {
+          for (const operation of ["get_inventory", "get_shopping_list"]) {
+            const response = await handler(request(operation, { token: `jeton-${user}` }));
+            assertEquals(response.status, 200);
+            assertEquals(Array.isArray(((await response.json()) as Inventory).items), true);
+          }
+        },
+      );
+
+      await t.step(
+        "add_items tout ambigu : la clé est libérée pour la relance précisée",
+        async () => {
+          const foods = await sql<{ id: number }[]>`
+          insert into public.food_ref (source, code, name) values
+            ('off', ${`test-${tag}-1`}, ${`Furikake ${tag}, nature`}),
+            ('off', ${`test-${tag}-2`}, ${`Furikake ${tag}, wasabi`})
+          returning id`;
+          const key = `ambigu-${tag}`;
+          const item = { name: `Furikake ${tag}`, category: "epices" };
+
+          const first = await call(user, "add_items", { items: [item], idempotency_key: key });
+          assertEquals([first.data.created.length, first.data.ambiguous.length], [0, 1]);
+          assertEquals(first.data.ambiguous[0].reason, "food");
+
+          const precise = await call(user, "add_items", {
+            items: [{ ...item, food_ref_id: foods[0]?.id }],
+            idempotency_key: key,
+          });
+          assertEquals(precise.data.replayed, undefined);
+          assertEquals(precise.data.created.length, 1);
+
+          // Enregistré cette fois : la même clé rejoue la réponse, sans doublon.
+          const again = await call(user, "add_items", {
+            items: [{ ...item, food_ref_id: foods[0]?.id }],
+            idempotency_key: key,
+          });
+          assertEquals(again.data.replayed, true);
+          assertEquals(again.data.created[0].id, precise.data.created[0].id);
+        },
+      );
+
       await t.step("RLS : l'autre utilisateur ne voit ni ne modifie cet article", async () => {
         const { data } = await call(other, "get_inventory");
         assertEquals((data as Inventory).items, []);
@@ -283,6 +326,7 @@ Deno.test({
       );
     } finally {
       await sql`delete from auth.users where id in (${user}, ${other})`;
+      await sql`delete from public.food_ref where code like ${`test-${tag}-%`}`;
       await sql.end();
     }
   },

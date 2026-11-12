@@ -151,6 +151,12 @@ export async function addPurchases(tx: Tx, { items, idempotency_key: key }: AddI
     return { replayed: true, ...previous.response };
   }
   const result = await addItems(tx, items);
+  // Rien d'enregistré (tout est ambigu) : la clé est libérée, pour que la relance avec les
+  // précisions demandées ne reçoive pas l'ancienne réponse.
+  if (result.created.length === 0 && result.restocked.length === 0) {
+    await tx`delete from public.idempotent_call where id = ${claim.id}`;
+    return result;
+  }
   await tx`update public.idempotent_call
            set response = ${tx.json(result as unknown as postgres.JSONValue)}
            where id = ${claim.id}`;

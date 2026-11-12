@@ -67,7 +67,7 @@ export async function authenticate(
   return { userId, origin };
 }
 
-// Corps JSON validé par un schéma Zod, ou la réponse 400. Les problèmes de validation
+// Corps JSON validé par un schéma Zod (un corps vide vaut {}), ou la réponse 400. Les problèmes de validation
 // donnent les chemins et les messages, jamais les valeurs saisies.
 export async function readInput<T>(
   request: Request,
@@ -80,9 +80,11 @@ export async function readInput<T>(
   },
   origin: string | null,
 ): Promise<{ input: T } | Response> {
+  // Corps vide = entrée vide : c'est l'appel normal d'une lecture (get_inventory…).
   let body: unknown;
   try {
-    body = await request.json();
+    const text = await request.text();
+    body = text.trim() === "" ? {} : JSON.parse(text);
   } catch {
     return json(400, errorBody("invalid_json", "Corps JSON attendu"), origin);
   }

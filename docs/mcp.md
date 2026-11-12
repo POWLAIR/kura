@@ -71,7 +71,7 @@ Le réassort suit le mode de suivi de l'article :
 
 La réponse a trois listes, `created`, `restocked` et `ambiguous`. Chaque entrée ambiguë porte sa raison, une indication pour Claude (`hint`), et les candidats ou articles à proposer. Claude relance seulement ces articles avec la précision.
 
-**Idempotence** : `idempotency_key` (optionnelle, 8 à 128 caractères) est réservée dans la table `idempotent_call`, dans la même transaction que les écritures. Un appel rejoué avec la même clé, par exemple après un timeout, renvoie la réponse enregistrée avec `replayed: true` et ne réécrit rien. Si l'appel échoue, la clé est libérée avec le reste.
+**Idempotence** : `idempotency_key` (optionnelle, 8 à 128 caractères) est réservée dans la table `idempotent_call`, dans la même transaction que les écritures. Un appel rejoué avec la même clé, par exemple après un timeout, renvoie la réponse enregistrée avec `replayed: true` et ne réécrit rien. Si l'appel échoue, la clé est libérée avec le reste. Si rien n'a été enregistré parce que tous les articles sont ambigus, elle est libérée aussi : la relance avec les précisions peut garder la même clé. Si une partie a été enregistrée, les articles ambigus se relancent avec une nouvelle clé.
 
 ### `update_item`
 
