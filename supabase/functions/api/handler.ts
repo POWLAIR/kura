@@ -49,9 +49,11 @@ export function createHandler({ findUser, asUser, appOrigins }: HandlerDeps) {
       return json(401, error("unauthenticated", "Session absente ou expirée"), origin);
     }
 
+    // Corps vide = entrée vide : c'est l'appel normal d'une lecture (get_inventory…).
     let body: unknown;
     try {
-      body = await request.json();
+      const text = await request.text();
+      body = text.trim() === "" ? {} : JSON.parse(text);
     } catch {
       return json(400, error("invalid_json", "Corps JSON attendu"), origin);
     }

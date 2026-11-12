@@ -25,7 +25,7 @@ Ce qui reste en direct dans l'app, avec supabase-js : les lectures simples (vue 
 
 ## Appel
 
-`POST /functions/v1/api/<opération>`, avec en corps JSON l'entrée de l'opération. Les noms et les entrées sont ceux des tools MCP (voir `docs/mcp.md`) : `get_inventory`, `add_items`, `update_item`, `get_shopping_list`, `log_meal`, `set_food_conversion`, `log_workout`, `log_weight`, `delete_entry`, `update_workout`, `update_weight`, `get_summary`.
+`POST /functions/v1/api/<opération>`, avec en corps JSON l'entrée de l'opération ; un corps vide vaut `{}`, pour les lectures sans filtre. Les noms et les entrées sont ceux des tools MCP (voir `docs/mcp.md`) : `get_inventory`, `add_items`, `update_item`, `get_shopping_list`, `log_meal`, `set_food_conversion`, `log_workout`, `log_weight`, `delete_entry`, `update_workout`, `update_weight`, `get_summary`.
 
 Depuis l'app :
 
@@ -42,7 +42,7 @@ const { data, error } = await supabase.functions.invoke("api/add_items", {
 | 401 | `unauthenticated` | Session absente ou expirée |
 | 403 | `origin_refused` | Page web d'une origine non autorisée |
 | 404 | `unknown_operation` | |
-| 422 | `refused` | Saisie refusée par une fonction SQL (article introuvable, unité incompatible…) ; `error.message` est en français, pour l'utilisateur |
+| 422 | `refused` | Saisie refusée par la base : `error.message` est le message en français de nos fonctions SQL (article introuvable, unité incompatible…), ou celui de Postgres pour une contrainte (valeur hors bornes, référence inconnue) |
 | 500 | `internal` | Erreur interne ; seul son code est dans les logs |
 | 503 | `auth_unavailable` | Le service d'authentification ne répond pas : réessayer, la session n'est pas en cause |
 
