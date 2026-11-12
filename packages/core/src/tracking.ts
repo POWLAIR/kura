@@ -304,6 +304,18 @@ export type NutritionSummary = Partial<Record<MainNutrientKey, number>> & {
   partial_values: boolean;
 };
 
+// Repas tel que stocké : totaux de la base, ou vides si le format est inattendu (le repas
+// est alors traité comme partiel plutôt que d'afficher des valeurs douteuses).
+export function mealNutritionOf(row: {
+  nutrition_totals: unknown;
+  partial_values: boolean;
+}): MealNutrition {
+  const totals = NutritionTotals.safeParse(row.nutrition_totals);
+  return totals.success
+    ? { totals: totals.data, partial_values: row.partial_values }
+    : { totals: { values: {}, incomplete: [] }, partial_values: true };
+}
+
 // Somme des colonnes principales sur plusieurs repas, arrondie au dixième. Une clé
 // renseignée dans certains repas seulement est incomplète sur la période.
 export function sumNutrition(meals: MealNutrition[]): NutritionSummary {

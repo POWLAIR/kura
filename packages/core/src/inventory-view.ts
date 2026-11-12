@@ -147,7 +147,13 @@ export const RECENT_PAST_DAYS = 30;
 // Date tapée à la française : « 12/11 », « 12/11/26 », « 12/11/2026 », ou AAAA-MM-JJ.
 // Sans année, c'est la prochaine occurrence à partir de `today`, ou une date passée depuis
 // peu (RECENT_PAST_DAYS). Renvoie AAAA-MM-JJ, ou null si la saisie n'est pas une date.
-export function parseDateInput(input: string, today: string): string | null {
+// `past` : pour une entrée du journal, sans année c'est la dernière fois que cette date est
+// arrivée, aujourd'hui compris.
+export function parseDateInput(
+  input: string,
+  today: string,
+  options: { past?: boolean } = {},
+): string | null {
   const text = input.trim();
   const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
   if (iso) return toIsoDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
@@ -158,6 +164,14 @@ export function parseDateInput(input: string, today: string): string | null {
   if (french[3] !== undefined) {
     const year = french[3].length === 2 ? 2000 + Number(french[3]) : Number(french[3]);
     return toIsoDate(year, month, day);
+  }
+
+  if (options.past) {
+    for (let year = Number(today.slice(0, 4)); year >= Number(today.slice(0, 4)) - 4; year--) {
+      const date = toIsoDate(year, month, day);
+      if (date !== null && date <= today) return date;
+    }
+    return null;
   }
 
   const earliest = new Date(Date.parse(today) - RECENT_PAST_DAYS * DAY_MS)

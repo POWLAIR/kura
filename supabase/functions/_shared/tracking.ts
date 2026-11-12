@@ -10,9 +10,8 @@ import {
   type LogWorkoutInput,
   localDate,
   type MealItemAmbiguity,
-  type MealNutrition,
+  mealNutritionOf,
   missingConversions,
-  NutritionTotals,
   periodRange,
   resolveMealItems,
   type StoredMealItem,
@@ -39,15 +38,6 @@ const MEAL_HINTS: Record<MealItemAmbiguity["reason"], string> = {
 
 const CONVERSION_HINT =
   "Valeurs partielles : demander à l'utilisateur le poids d'une pièce (pesée, emballage) ou la densité de ces aliments, sans jamais les estimer, puis appeler set_food_conversion. Ce repas et les précédents seront recalculés.";
-
-// Repas tel que stocké : totaux de la base, ou vides si le format est inattendu (le repas
-// est alors traité comme partiel plutôt que d'afficher des valeurs douteuses).
-function nutritionOf(row: { nutrition_totals: unknown; partial_values: boolean }): MealNutrition {
-  const totals = NutritionTotals.safeParse(row.nutrition_totals);
-  return totals.success
-    ? { totals: totals.data, partial_values: row.partial_values }
-    : { totals: { values: {}, incomplete: [] }, partial_values: true };
-}
 
 type MealRow = {
   id: number;
@@ -84,7 +74,7 @@ async function mealView(tx: Tx, mealId: number) {
     id: meal.id,
     label: meal.label,
     eaten_at: `${meal.day} ${meal.time}`,
-    nutrition: sumNutrition([nutritionOf(meal)]),
+    nutrition: sumNutrition([mealNutritionOf(meal)]),
     items: meal.items.map(compact) as StoredMealItem[],
   };
 }
@@ -274,7 +264,7 @@ export async function getSummary(tx: Tx, input: SummaryInput) {
     from,
     to,
     timezone: TIMEZONE,
-    nutrition: sumNutrition(meals.map(nutritionOf)),
+    nutrition: sumNutrition(meals.map(mealNutritionOf)),
     workout_minutes: minutes(workouts),
   };
 
@@ -303,7 +293,7 @@ export async function getSummary(tx: Tx, input: SummaryInput) {
       return {
         date: day,
         meals: ofDay.length,
-        nutrition: sumNutrition(ofDay.map(nutritionOf)),
+        nutrition: sumNutrition(ofDay.map(mealNutritionOf)),
         workout_minutes: minutes(workouts.filter((w) => w.day === day)),
       };
     }),
