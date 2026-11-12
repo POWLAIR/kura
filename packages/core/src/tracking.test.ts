@@ -177,7 +177,40 @@ describe("resolveMealItems", () => {
   });
 });
 
+const pick = ({ food, food_ref_id }: { food: string; food_ref_id: number }) => ({
+  food,
+  food_ref_id,
+});
+
 describe("missingConversions", () => {
+  it("valeurs pour 100 ml : rien à demander en ml, la densité en g ou en pièces", () => {
+    const juice = { food: "Jus d'orange", food_ref_id: 9, per_100_unit: "ml" as const };
+    expect(
+      missingConversions([
+        { ...juice, name: "verre de jus", unit: "ml" },
+        { ...juice, name: "jus pesé", unit: "g", grams: 200, counted: false },
+        { ...juice, name: "brique", unit: "piece", counted: false },
+      ]),
+    ).toEqual([
+      { ...pick(juice), name: "jus pesé", unit: "g", field: "density_g_ml" },
+      { ...pick(juice), name: "brique", unit: "piece", field: "piece_weight_g" },
+    ]);
+    // Densité connue : l'aliment pesé est compté, il n'y a plus rien à demander.
+    expect(missingConversions([{ ...juice, name: "jus pesé", unit: "g", grams: 200 }])).toEqual([]);
+    // Pièce pesée mais sans densité : c'est la densité qui manque.
+    expect(
+      missingConversions([{ ...juice, name: "brique", unit: "piece", grams: 250, counted: false }]),
+    ).toEqual([{ ...pick(juice), name: "brique", unit: "piece", field: "density_g_ml" }]);
+  });
+
+  it("base inconnue : rien à demander, l'aliment reste simplement non compté", () => {
+    expect(
+      missingConversions([
+        { name: "soda", food: "Soda", food_ref_id: 8, unit: "g", grams: 330, counted: false },
+      ]),
+    ).toEqual([]);
+  });
+
   it("liste une fois chaque aliment et unité non convertis, pas les grammes ni les aliments libres", () => {
     expect(
       missingConversions([

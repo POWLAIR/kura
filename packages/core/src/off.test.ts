@@ -113,6 +113,7 @@ describe("mapOffProduct", () => {
       brand: null,
       package_quantity: null,
       package_unit: null,
+      per_100_unit: null, // ni contenance ni portion : base inconnue, jamais supposée
       energy_kcal: null, // les kJ ne sont pas convertis
       protein_g: null,
       salt_g: 16.9,
@@ -154,7 +155,17 @@ describe("mapOffProduct", () => {
       status: 1,
       product: { product_name: "Œufs", product_quantity: 6, product_quantity_unit: "pcs" },
     });
-    expect(food).toMatchObject({ package_quantity: null, package_unit: null, per_100_unit: "g" });
+    expect(food).toMatchObject({ package_quantity: null, package_unit: null, per_100_unit: null });
+  });
+
+  it("à défaut de contenance, prend la base dans l'unité de la portion", () => {
+    const product = { product_name: "Jus d'orange", nutriments: {} };
+    const perOf = (extra: Record<string, unknown>) =>
+      mapOffProduct(NUTELLA, { status: 1, product: { ...product, ...extra } })?.per_100_unit;
+    expect(perOf({ serving_quantity_unit: "ml" })).toBe("ml");
+    expect(perOf({ serving_quantity_unit: "g" })).toBe("g");
+    expect(perOf({ product_quantity_unit: "g", serving_quantity_unit: "ml" })).toBe("g");
+    expect(perOf({})).toBeNull();
   });
 
   it("renvoie null pour un produit inconnu ou sans nom", () => {

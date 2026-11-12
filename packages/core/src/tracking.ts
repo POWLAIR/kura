@@ -208,23 +208,38 @@ export type StoredMealItem = {
   food_ref_id?: number;
   unit?: StockAmount["unit"];
   grams?: number;
+  // Présent seulement quand les valeurs de l'aliment sont pour 100 ml (produit au volume).
+  per_100_unit?: "ml";
+  // false : l'aliment n'entre pas dans les totaux (le repas est « valeurs partielles »).
+  counted?: false;
 };
 
 export type MissingConversion = {
   food_ref_id: number;
   name: string;
   food: string | undefined;
-  unit: "piece" | "ml";
+  unit: StockAmount["unit"];
   field: "piece_weight_g" | "density_g_ml";
 };
 
-// Aliments rattachés à food_ref mais non convertis en grammes, faute de poids par pièce
-// ou de densité : la valeur est à demander à l'utilisateur, une fois par aliment et unité.
+// Valeur qui manque pour compter l'aliment, ou null s'il n'y a rien à demander.
+function missingField(item: StoredMealItem): MissingConversion["field"] | null {
+  if (item.unit === "piece" && item.grams === undefined) return "piece_weight_g";
+  if (item.per_100_unit === "ml") {
+    // Valeurs pour 100 ml : une quantité en ml se compte telle quelle ; en g ou en pièces,
+    // il faut la densité.
+    return item.unit !== "ml" && item.counted === false ? "density_g_ml" : null;
+  }
+  return item.unit === "ml" && item.grams === undefined ? "density_g_ml" : null;
+}
+
+// Aliments rattachés à food_ref mais non comptés, faute de poids par pièce ou de densité :
+// la valeur est à demander à l'utilisateur, une fois par aliment et unité.
 export function missingConversions(items: StoredMealItem[]): MissingConversion[] {
   const missing = new Map<string, MissingConversion>();
   for (const item of items) {
-    if (item.food_ref_id === undefined || item.grams !== undefined) continue;
-    if (item.unit !== "piece" && item.unit !== "ml") continue;
+    const field = item.food_ref_id === undefined ? null : missingField(item);
+    if (item.food_ref_id === undefined || item.unit === undefined || field === null) continue;
     const key = `${item.food_ref_id}:${item.unit}`;
     if (missing.has(key)) continue;
     missing.set(key, {
@@ -232,7 +247,7 @@ export function missingConversions(items: StoredMealItem[]): MissingConversion[]
       name: item.name,
       food: item.food,
       unit: item.unit,
-      field: item.unit === "piece" ? "piece_weight_g" : "density_g_ml",
+      field,
     });
   }
   return [...missing.values()];
