@@ -70,7 +70,14 @@ export default function KitchenScreen() {
         ]}
         value={view}
       />
-      <Button label="Ajouter un article" onPress={() => router.push("/cuisine/ajouter")} />
+      <View style={styles.actions}>
+        <Button label="Scanner des courses" onPress={() => router.push("/cuisine/scanner")} />
+        <Button
+          label="Ajouter un article"
+          onPress={() => router.push("/cuisine/ajouter")}
+          variant="secondary"
+        />
+      </View>
 
       {error ? (
         <>
@@ -106,6 +113,7 @@ export default function KitchenScreen() {
 }
 
 const styles = StyleSheet.create({
+  actions: { gap: spacing.sm },
   group: { gap: spacing.sm },
   category: { gap: spacing.sm, marginTop: spacing.xs },
   row: { borderWidth: 1, borderRadius: 12, padding: spacing.md, gap: spacing.sm },
