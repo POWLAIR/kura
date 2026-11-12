@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { apiErrorFrom } from "../lib/api-error";
-import { newIdempotencyKey } from "../lib/idempotency";
+import { createKeyring, newIdempotencyKey } from "../lib/idempotency";
 import {
   ambiguityMessage,
   changesOf,
@@ -121,7 +121,7 @@ describe("purchaseOf", () => {
 });
 
 describe("ambiguityMessage", () => {
-  const ambiguity = { name: "Riz", hint: "", candidates: [], items: [] };
+  const ambiguity = { index: 0, name: "Riz", hint: "", candidates: [], items: [] };
 
   it("dit qu'aucun aliment ne correspond quand il n'y a rien à proposer", () => {
     expect(ambiguityMessage({ ...ambiguity, reason: "food" })).toMatch(
@@ -249,5 +249,24 @@ describe("newIdempotencyKey", () => {
     const keys = Array.from({ length: 50 }, () => newIdempotencyKey("courses"));
     expect(new Set(keys).size).toBe(50);
     for (const key of keys) expect(key).toMatch(/^courses-[a-z0-9]+-[a-z0-9]{10}$/);
+  });
+});
+
+describe("createKeyring", () => {
+  it("garde la clé tant que le contenu est le même, en change dès qu'il change", () => {
+    const keyring = createKeyring("courses");
+    const first = keyring.keyFor({ items: [{ name: "Riz", quantity: 1 }] });
+    expect(keyring.keyFor({ items: [{ name: "Riz", quantity: 1 }] })).toBe(first);
+    const edited = keyring.keyFor({ items: [{ name: "Riz", quantity: 2 }] });
+    expect(edited).not.toBe(first);
+    // Revenir à l'ancien contenu ne ressort pas l'ancienne clé : elle a pu servir.
+    expect(keyring.keyFor({ items: [{ name: "Riz", quantity: 1 }] })).not.toBe(first);
+  });
+
+  it("repart d'une clé neuve après un envoi réussi", () => {
+    const keyring = createKeyring("courses");
+    const first = keyring.keyFor("a");
+    keyring.reset();
+    expect(keyring.keyFor("a")).not.toBe(first);
   });
 });

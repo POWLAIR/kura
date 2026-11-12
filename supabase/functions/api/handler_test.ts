@@ -266,6 +266,7 @@ Deno.test({
           const first = await call(user, "add_items", { items: [item], idempotency_key: key });
           assertEquals([first.data.created.length, first.data.ambiguous.length], [0, 1]);
           assertEquals(first.data.ambiguous[0].reason, "food");
+          assertEquals(first.data.ambiguous[0].index, 0);
 
           const precise = await call(user, "add_items", {
             items: [{ ...item, food_ref_id: foods[0]?.id }],
