@@ -1,8 +1,8 @@
 import { generateApiKey, hashApiKey, STOCK_LEVEL_FRACTION } from "@kura/core";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { assertEquals } from "@std/assert";
+import { asUser, connect } from "../../_shared/db.ts";
 import { createApp } from "../app.ts";
-import { asUser, connect } from "../db.ts";
 
 // Test d'intégration : client MCP officiel → handler → base (pnpm db:start ou CI).
 const url = Deno.env.get("KURA_TEST_DB_URL");

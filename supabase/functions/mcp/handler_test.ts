@@ -1,7 +1,7 @@
 import { generateApiKey, hashApiKey } from "@kura/core";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { assertEquals, assertRejects } from "@std/assert";
-import type { Caller } from "./db.ts";
+import type { Caller } from "../_shared/db.ts";
 import { createHandler } from "./handler.ts";
 import { buildServer, SERVER_INFO } from "./server.ts";
 

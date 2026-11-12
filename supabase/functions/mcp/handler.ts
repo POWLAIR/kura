@@ -9,8 +9,8 @@ import {
   OAuthErrorCode,
   originValidationResponse,
 } from "@modelcontextprotocol/server";
-import type { Caller } from "./db.ts";
-import { errorCode, log } from "./log.ts";
+import type { Caller } from "../_shared/db.ts";
+import { errorCode, log } from "../_shared/log.ts";
 
 export type HandlerDeps = {
   findCaller: (keyHash: string) => Promise<Caller | null>;

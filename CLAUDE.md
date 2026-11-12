@@ -11,9 +11,9 @@ apps/mobile/          App Expo (Android + web), Expo Router — voir docs/app.md
 packages/core/        Schémas Zod + logique métier partagés app ↔ MCP (nutrients, food-match, purchase, tracking)
 scripts/              Imports ponctuels exécutés en local (Ciqual, Notion)
 supabase/migrations/  Schéma Postgres, RLS, fonctions RPC (cook_recipe…)
-supabase/functions/   Edge Functions Deno : mcp (voir docs/mcp.md), recipes, notion-export…
+supabase/functions/   Edge Functions Deno : mcp (docs/mcp.md), api (docs/api.md), recipes, notion-export… ; _shared = opérations métier communes
 supabase/tests/       Tests pgTAP (SQL + RLS)
-docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP ; app.md : app Expo ; deploiement.md)
+docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP ; api.md : API de l'app ; app.md : app Expo ; deploiement.md)
 ```
 
 ## Commandes
@@ -51,7 +51,7 @@ KURA_ENV_FILE=.env.production pnpm <script>  # scripts contre la base déployée
 - TypeScript strict partout ; Deno pour `supabase/functions` (`pnpm exec deno`, version épinglée par pnpm), Node 22+ (`.nvmrc`) ailleurs — `supabase-js` ne fonctionne plus en Node 20.
 - `packages/core` est importé par Deno : imports relatifs avec extension `.ts`, pas de dépendance propre à Node.
 - App Expo : seules les variables `EXPO_PUBLIC_*` y sont embarquées, donc la clé publique uniquement ; les écrans passent par le client de `src/lib/supabase.ts` (session de l'utilisateur, RLS).
-- Tools MCP : toujours via `db` (`asUser`, RLS de l'utilisateur), jamais via la connexion brute.
+- Opérations métier (`supabase/functions/_shared/operations.ts`) : une seule liste pour les tools MCP et l'API de l'app ; toujours via `asUser` (RLS de l'utilisateur), jamais via la connexion brute. Une nouvelle opération s'ajoute là, pas dans une seule des deux fonctions.
 - Code et identifiants en anglais (`inventory_item`, `cookRecipe`), textes visibles par l'utilisateur en français.
 - Migrations : jamais modifier une migration mergée (voir skill `new-migration`).
 - Compte GitHub : **POWLAIR** (`git@github.com:POWLAIR/kura.git`). Commits, push et PR se font avec ce compte — identité git locale `POWLAIR <114736502+POWLAIR@users.noreply.github.com>`, jamais l'adresse pro du `~/.gitconfig` global. Vérifier `git config user.email` et `gh auth status` avant de pousser.
