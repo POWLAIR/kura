@@ -16,6 +16,7 @@ export default function KitchenLayout() {
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="ajouter" options={{ title: "Ajouter un article" }} />
+      <Stack.Screen name="scanner" options={{ title: "Ranger les courses" }} />
       <Stack.Screen name="[id]" options={{ title: "Modifier l'article" }} />
     </Stack>
   );
