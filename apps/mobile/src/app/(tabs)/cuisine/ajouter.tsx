@@ -144,7 +144,7 @@ export default function AddItemScreen() {
           value={form.location}
         />
         <Field
-          hint="Optionnelle. Par exemple 24/12 ou 24/12/2026."
+          hint="Optionnelle. Par exemple 24/12 ou 24/12/2026 ; sans année, c'est la prochaine fois que cette date arrive."
           label="Date de péremption"
           onChangeText={(expires) => set({ expires })}
           placeholder="JJ/MM"

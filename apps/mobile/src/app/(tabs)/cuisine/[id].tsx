@@ -213,7 +213,7 @@ export default function ItemScreen() {
           </>
         )}
         <Field
-          hint="Par exemple 24/12 ou 24/12/2026. Laisse vide s'il n'y en a pas."
+          hint="Par exemple 24/12 ou 24/12/2026 ; sans année, c'est la prochaine fois que cette date arrive. Laisse vide s'il n'y en a pas."
           label="Date de péremption"
           onChangeText={(expires) => set({ expires })}
           placeholder="JJ/MM"
