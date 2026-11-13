@@ -214,6 +214,7 @@ describe("après l'envoi", () => {
     restocked: [item(7, "Pâte à tartiner"), item(8, "Sauce soja", true)],
     ambiguous: [
       {
+        index: 2,
         name: "Pommes",
         reason: "food",
         hint: "",
@@ -223,15 +224,17 @@ describe("après l'envoi", () => {
     ],
   };
 
-  it("garde seulement les lignes ambiguës, avec de quoi trancher", () => {
+  it("garde seulement les lignes ambiguës, retrouvées par leur position", () => {
+    // Deux lignes portent le même nom : seule la seconde est ambiguë.
     const lines = [
       lineFromProduct(nutella, [spread]),
       { ...manualLine("Pommes", "m1"), category: "frais" as const },
-      { ...manualLine("Poires", "m2"), category: "frais" as const },
+      { ...manualLine("Pommes", "m2"), category: "frais" as const },
     ];
     const remaining = remainingLines(lines, result);
-    expect(remaining.map((line) => line.key)).toEqual(["m1"]);
+    expect(remaining.map((line) => line.key)).toEqual(["m2"]);
     expect(remaining[0]?.ambiguity?.candidates).toHaveLength(1);
+    expect(remainingLines(lines, { ...result, ambiguous: [] })).toEqual([]);
   });
 
   it("résume ce qui est rangé et ce qui sort de la liste « À racheter »", () => {
