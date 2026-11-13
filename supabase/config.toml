@@ -426,3 +426,8 @@ verify_jwt = true
 # Produit Open Food Facts par code-barres : même authentification que l'API de l'app.
 [functions.off-product]
 verify_jwt = true
+
+# Suppression du compte : même authentification ; seule fonction à utiliser la clé
+# service_role (voir docs/api.md).
+[functions.delete-account]
+verify_jwt = true
