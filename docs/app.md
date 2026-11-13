@@ -62,6 +62,14 @@ apps/mobile/
 - **Couleurs** : ni rouge ni vert pour porter un sens, comme le demande la conception.
 - **Web** : `web.output` vaut `single` (une seule page, sans rendu côté serveur), ce qui suffit pour la PWA.
 
+## Accueil
+
+- **Compagnon provisoire** (`components/companion.tsx`) : une forme simple dessinée avec des vues, sans animation ni machine à états. Le personnage final (Rive, six états) arrive en phase 5, et son identité reste à valider. Sa phrase parle de la cuisine : un produit qui attend d'être cuisiné, ou rien.
+- **Aujourd'hui** : les repas, séances et pesées du jour, lus par `get_summary` comme le Journal ; seulement leur nombre et les minutes de sport, le détail est dans le Journal.
+- **À surveiller** : les articles périmés ou qui périment dans les trois jours (`expiringSoon`), le plus proche d'abord ; un appui ouvre la fiche.
+
+Le bouton « Qu'est-ce que je mange ? » arrive en phase 3. « Se déconnecter » reste ici en attendant les réglages.
+
 ## Onglet Cuisine
 
 - **Liste** : lue directement dans la vue `inventory_status`, regroupée par emplacement puis par catégorie (`groupInventory` de `packages/core`). Une péremption à trois jours ou moins est mise en avant par une étiquette, sans rouge ni vert ; « À racheter » filtre les articles sous leur seuil.
