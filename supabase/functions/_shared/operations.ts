@@ -1,5 +1,6 @@
 import {
   AddItemsInput,
+  CreateApiKeyInput,
   DeleteEntryInput,
   FoodConversionInput,
   InventoryQuery,
@@ -7,12 +8,14 @@ import {
   LogWeightInput,
   LogWorkoutInput,
   RemoveItemInput,
+  RevokeApiKeyInput,
   SummaryInput,
   UpdateItemInput,
   UpdateWeightInput,
   UpdateWorkoutInput,
 } from "@kura/core";
 import { z } from "zod";
+import { createApiKey, revokeApiKey } from "./api-keys.ts";
 import type { Tx } from "./db.ts";
 import {
   addPurchases,
@@ -57,6 +60,9 @@ export const OPERATIONS = {
   update_workout: operation(UpdateWorkoutInput, updateWorkout),
   update_weight: operation(UpdateWeightInput, updateWeight),
   get_summary: operation(SummaryInput, getSummary),
+  // Réglages de l'app seulement : pas de tool MCP pour ces deux-là.
+  create_api_key: operation(CreateApiKeyInput, createApiKey),
+  revoke_api_key: operation(RevokeApiKeyInput, revokeApiKey),
 };
 
 export type OperationName = keyof typeof OPERATIONS;

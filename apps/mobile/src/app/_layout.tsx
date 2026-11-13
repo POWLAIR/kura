@@ -21,6 +21,10 @@ function RootStack() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={session !== null}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="reglages"
+          options={{ headerShown: true, title: "Réglages", headerBackTitle: "Retour" }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={session === null}>
         <Stack.Screen name="sign-in" />

@@ -25,6 +25,8 @@ pnpm mcp:key --user <email> [--label "Claude desktop"]   # crée une clé (affic
 pnpm mcp:key --revoke kura_AbCdEfG                        # révoque, par les 12 premiers caractères
 ```
 
+Les clés se gèrent aussi depuis les réglages de l'app (voir `docs/app.md`), par les opérations `create_api_key` et `revoke_api_key` de la fonction `api`. Ces deux opérations ne sont pas des tools MCP : une clé ne crée pas d'autres clés.
+
 Lance `pnpm mcp:key` toi-même : la clé apparaît dans le terminal. Les variables `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont lues dans `.env`.
 
 ## Données : toujours sous RLS

@@ -3,6 +3,8 @@
 // qu'une fois, à la création, et n'est jamais stockée ni loggée.
 // Web Crypto uniquement : même code en Node (scripts) et en Deno (Edge Functions).
 
+import { z } from "zod";
+
 export const API_KEY_PREFIX = "kura_";
 // Début de clé gardé en clair (api_key.key_prefix) pour la reconnaître dans les réglages.
 export const API_KEY_VISIBLE_LENGTH = 12;
@@ -66,3 +68,30 @@ export function describeCredentialHeaders(headers: HeaderBag): string {
   });
   return seen.join(" ") || "aucun";
 }
+
+// ---------------------------------------------------------------------------
+// Gestion des clés depuis les réglages de l'app
+// ---------------------------------------------------------------------------
+
+export const CreateApiKeyInput = z.object({
+  label: z.string().trim().min(1).max(60).describe("Nom de la clé, ex. « Claude mobile »"),
+});
+export type CreateApiKeyInput = z.infer<typeof CreateApiKeyInput>;
+
+export const RevokeApiKeyInput = z.object({
+  id: z.number().int().positive().describe("Id de la clé"),
+});
+export type RevokeApiKeyInput = z.infer<typeof RevokeApiKeyInput>;
+
+// Une clé telle que l'affichent les réglages : jamais le hash, encore moins la clé.
+export type ApiKeyView = {
+  id: number;
+  label: string;
+  key_prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+};
+
+// Réponse de create_api_key : `secret` est la clé en clair, montrée cette seule fois.
+export type CreatedApiKey = { key: ApiKeyView; secret: string };
