@@ -138,6 +138,24 @@ export function expiryLabel(expiresOn: string | null | undefined, today: string)
   }
 }
 
+// Les articles à surveiller : déjà périmés ou qui périment dans les EXPIRY_SOON_DAYS jours,
+// la date la plus proche d'abord.
+export function expiringSoon<T extends { name: string; expires_on?: string | null }>(
+  items: T[],
+  today: string,
+): T[] {
+  return items
+    .filter((item) => {
+      const { kind } = expiryStatus(item.expires_on, today);
+      return kind === "expired" || kind === "soon";
+    })
+    .sort(
+      (a, b) =>
+        (a.expires_on ?? "").localeCompare(b.expires_on ?? "") ||
+        a.name.localeCompare(b.name, "fr"),
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Saisie d'une date
 // ---------------------------------------------------------------------------
