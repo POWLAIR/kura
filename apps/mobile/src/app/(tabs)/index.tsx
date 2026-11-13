@@ -8,7 +8,6 @@ import { Button, Notice, SectionTitle, Tag } from "@/components/ui";
 import { useInventory } from "@/inventory/use-inventory";
 import { type DayView, fetchDay } from "@/journal/data";
 import { errorMessage } from "@/lib/api-error";
-import { supabase } from "@/lib/supabase";
 import { today } from "@/lib/today";
 import { spacing, usePalette } from "@/theme";
 
@@ -140,7 +139,7 @@ export default function HomeScreen() {
       ))}
 
       <View style={styles.footer}>
-        <Button label="Se déconnecter" onPress={() => supabase.auth.signOut()} variant="quiet" />
+        <Button label="Réglages" onPress={() => router.push("/reglages")} variant="quiet" />
       </View>
     </Screen>
   );
