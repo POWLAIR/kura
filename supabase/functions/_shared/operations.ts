@@ -15,6 +15,7 @@ import {
   UpdateWorkoutInput,
 } from "@kura/core";
 import { z } from "zod";
+import { exportData } from "./account.ts";
 import { createApiKey, revokeApiKey } from "./api-keys.ts";
 import type { Tx } from "./db.ts";
 import {
@@ -60,9 +61,10 @@ export const OPERATIONS = {
   update_workout: operation(UpdateWorkoutInput, updateWorkout),
   update_weight: operation(UpdateWeightInput, updateWeight),
   get_summary: operation(SummaryInput, getSummary),
-  // Réglages de l'app seulement : pas de tool MCP pour ces deux-là.
+  // Réglages de l'app seulement : pas de tool MCP pour celles-ci.
   create_api_key: operation(CreateApiKeyInput, createApiKey),
   revoke_api_key: operation(RevokeApiKeyInput, revokeApiKey),
+  export_data: operation(z.object({}), (tx) => exportData(tx)),
 };
 
 export type OperationName = keyof typeof OPERATIONS;

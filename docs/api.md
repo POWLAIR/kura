@@ -21,11 +21,12 @@ supabase/functions/
   mcp/              Ce que lit Claude : titres, descriptions, consignes ; auth par clé API
   api/              Ce qu'appelle l'app : les opérations, par leur nom
   off-product/      Produit par code-barres (docs/open-food-facts.md)
+  delete-account/   Suppression du compte (seule à utiliser la clé service_role)
 ```
 
 Une opération ajoutée à `OPERATIONS` est disponible dans l'API ; elle devient un tool MCP quand on lui écrit sa description dans `mcp/tools/`.
 
-Deux opérations sont réservées à l'app et n'ont pas de tool MCP : `create_api_key` et `revoke_api_key` (clés du connecteur, `_shared/api-keys.ts`).
+Trois opérations sont réservées à l'app et n'ont pas de tool MCP : `create_api_key` et `revoke_api_key` (clés du connecteur, `_shared/api-keys.ts`), et `export_data` (`_shared/account.ts`).
 
 Ce qui reste en direct dans l'app, avec supabase-js : les lectures simples (vue `inventory_status`, tables sous RLS) et les RPC unitaires (`update_item`…).
 
@@ -51,6 +52,20 @@ const { data, error } = await supabase.functions.invoke("api/add_items", {
 | 422 | `refused` | Saisie refusée par la base : `error.message` est le message en français de nos fonctions SQL (article introuvable, unité incompatible…), ou celui de Postgres pour une contrainte (valeur hors bornes, référence inconnue) |
 | 500 | `internal` | Erreur interne ; seul son code est dans les logs |
 | 503 | `auth_unavailable` | Le service d'authentification ne répond pas : réessayer, la session n'est pas en cause |
+
+## Export et suppression du compte
+
+Les deux droits sur ses données prévus par la conception (« Sécurité et données de santé »).
+
+**`export_data`** (opération de `api`) renvoie toutes les données de l'utilisateur en JSON : `{ format: 1, exported_at, tables: { <table>: [lignes] } }`. Les tables sont lues telles quelles, sous RLS : `inventory_item`, `stock_movement`, `recipe`, `recipe_ingredient`, `meal`, `meal_item`, `workout`, `body_measure`, `food_conversion`, `companion_event`, puis `api_key` sans le hash des clés, et les lignes de `food_ref` que ces données citent. `idempotent_call` n'y figure pas : c'est un cache technique de réponses déjà présentes ailleurs.
+
+**`delete-account`** (`supabase/functions/delete-account/`) supprime le compte : `POST /functions/v1/delete-account`, corps `{ "confirm": "SUPPRIMER" }`, avec la session de l'utilisateur.
+
+- L'id du compte vient de la session, jamais du corps : on ne supprime que son propre compte.
+- La fonction supprime le compte Supabase Auth par l'API d'administration ; toutes les lignes de l'utilisateur partent avec lui, chaque table référençant `auth.users` en `on delete cascade`. Un test vérifie qu'il ne reste aucune ligne portant ce `user_id`, dans aucune table.
+- **C'est la seule fonction de Kura à utiliser la clé `service_role`** (`SUPABASE_SERVICE_ROLE_KEY`, fournie d'office aux Edge Functions) : elle ne sert qu'à cet appel et ne sort pas du serveur.
+- Réponses : 200 `{ deleted: true }` ; 400 sans le mot de confirmation ; 401 sans session ; 502 `delete_failed` si Supabase Auth refuse, auquel cas rien n'est supprimé.
+- Logs : `delete_account_error` avec un code, rien d'autre.
 
 ## Authentification
 

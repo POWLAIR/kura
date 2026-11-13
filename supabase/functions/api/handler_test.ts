@@ -377,6 +377,43 @@ Deno.test({
           assertEquals(logs, []);
         },
       );
+      await t.step(
+        "export_data : toutes ses lignes, aucune de l'autre, jamais le hash des clés",
+        async () => {
+          await call(user, "create_api_key", { label: "Export" });
+          await call(other, "log_weight", { weight_kg: 81.2, idempotency_key: `autre-${tag}` });
+          const { status, data } = await call(user, "export_data");
+          assertEquals(status, 200);
+          assertEquals(data.format, 1);
+          assertEquals(Object.keys(data.tables).sort(), [
+            "api_key",
+            "body_measure",
+            "companion_event",
+            "food_conversion",
+            "food_ref",
+            "inventory_item",
+            "meal",
+            "meal_item",
+            "recipe",
+            "recipe_ingredient",
+            "stock_movement",
+            "workout",
+          ]);
+          const rows = Object.values(
+            data.tables as Record<string, Record<string, unknown>[]>,
+          ).flat();
+          assertEquals(
+            rows.filter((row) => "user_id" in row && row.user_id !== user),
+            [],
+          );
+          assertEquals(
+            data.tables.body_measure.map((row: { weight_kg: number }) => row.weight_kg),
+            [72.4],
+          );
+          assertEquals(data.tables.api_key.length >= 1, true);
+          assertEquals(JSON.stringify(data).includes("key_hash"), false);
+        },
+      );
     } finally {
       await sql`delete from auth.users where id in (${user}, ${other})`;
       await sql`delete from public.food_ref where code like ${`test-${tag}-%`}`;
