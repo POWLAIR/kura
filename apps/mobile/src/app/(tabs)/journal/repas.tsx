@@ -11,7 +11,7 @@ import { type FoodHit, searchFoods } from "@/inventory/use-inventory";
 import { type MealForm, type MealItemForm, mealInputOf, whenNow } from "@/journal/forms";
 import { callApi, callOffProduct } from "@/lib/api";
 import { errorMessage, NETWORK_MESSAGE } from "@/lib/api-error";
-import { newIdempotencyKey } from "@/lib/idempotency";
+import { createKeyring, withKey } from "@/lib/idempotency";
 import { today } from "@/lib/today";
 import { spacing, usePalette } from "@/theme";
 
@@ -36,7 +36,7 @@ export default function MealScreen() {
     label: "",
     items: [],
   }));
-  const [key] = useState(() => newIdempotencyKey("repas"));
+  const [keyring] = useState(() => createKeyring("repas"));
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<FoodHit[] | null>(null);
   const [code, setCode] = useState("");
@@ -101,7 +101,7 @@ export default function MealScreen() {
   }
 
   async function save() {
-    const input = mealInputOf(form, today(), key);
+    const input = mealInputOf(form, today(), "cle-a-venir");
     if (!input.ok) {
       setProblem(input.message);
       return;
@@ -109,7 +109,7 @@ export default function MealScreen() {
     setPending(true);
     setProblem(null);
     try {
-      const logged = await callApi<Logged>("log_meal", input.value);
+      const logged = await callApi<Logged>("log_meal", withKey(keyring, input.value));
       if (logged.missing_conversions && logged.missing_conversions.length > 0) {
         setMissing(logged.missing_conversions);
       } else {

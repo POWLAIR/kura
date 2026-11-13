@@ -14,7 +14,7 @@ import {
 import { callApi } from "@/lib/api";
 import { errorMessage, NETWORK_MESSAGE } from "@/lib/api-error";
 import { confirm } from "@/lib/confirm";
-import { newIdempotencyKey } from "@/lib/idempotency";
+import { createKeyring, withKey } from "@/lib/idempotency";
 import { today } from "@/lib/today";
 import { spacing, usePalette } from "@/theme";
 
@@ -31,7 +31,7 @@ export default function WeightScreen() {
   const [form, setForm] = useState<WeightForm | null>(() =>
     id === null ? { ...whenNow(params.day ?? today(), new Date()), weight: "" } : null,
   );
-  const [key] = useState(() => newIdempotencyKey("pesee"));
+  const [keyring] = useState(() => createKeyring("pesee"));
   const [pending, setPending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [missing, setMissing] = useState<string | null>(null);
@@ -94,9 +94,9 @@ export default function WeightScreen() {
       if (input === null) return router.back();
       return run(() => callApi("update_weight", input));
     }
-    const input = weightInputOf(form, today(), key);
+    const input = weightInputOf(form, today(), "cle-a-venir");
     if (!input.ok) return setProblem(input.message);
-    return run(() => callApi("log_weight", input.value));
+    return run(() => callApi("log_weight", withKey(keyring, input.value)));
   }
 
   async function remove() {
