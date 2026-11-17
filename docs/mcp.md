@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`) qui expose les tools de la conception (section « Serveur MCP ») à Claude. Les tools d'inventaire et de suivi sont décrits plus bas. À la connexion, le serveur envoie aussi à Claude des instructions communes (`server.ts`) : ne jamais estimer de valeur nutritionnelle, relancer sur les ambiguïtés, partir du stock pour les recettes, enregistrer le repas quand l'utilisateur dit avoir mangé et mettre à jour le stock des ingrédients pris dans le stock quand il a cuisiné, une clé d'idempotence par enregistrement, rester neutre.
+Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`) qui expose les tools de la conception (section « Serveur MCP ») à Claude. La logique des tools vit dans `supabase/functions/_shared/` : l'API de l'app l'exécute aussi (voir `docs/api.md`). Les tools d'inventaire et de suivi sont décrits plus bas. À la connexion, le serveur envoie aussi à Claude des instructions communes (`server.ts`) : ne jamais estimer de valeur nutritionnelle, relancer sur les ambiguïtés, partir du stock pour les recettes, enregistrer le repas quand l'utilisateur dit avoir mangé et mettre à jour le stock des ingrédients pris dans le stock quand il a cuisiné, une clé d'idempotence par enregistrement, rester neutre.
 
 ## Transport
 
@@ -29,7 +29,7 @@ Lance `pnpm mcp:key` toi-même : la clé apparaît dans le terminal. Les variabl
 
 ## Données : toujours sous RLS
 
-`db.ts` ouvre une connexion Postgres (`SUPABASE_DB_URL`). Une seule requête s'exécute hors RLS : la recherche de la clé par son hash (`findCaller`), puisque l'utilisateur n'est pas encore connu.
+`_shared/db.ts` ouvre une connexion Postgres (`SUPABASE_DB_URL`). Une seule requête s'exécute hors RLS : la recherche de la clé par son hash (`findCaller`), puisque l'utilisateur n'est pas encore connu.
 
 Tout le reste passe par `asUser`. Cette fonction ouvre une transaction et s'y présente avec le rôle `authenticated` et les claims de l'utilisateur, comme le fait PostgREST pour l'app. La RLS s'applique donc telle quelle, `auth.uid()` vaut l'utilisateur de la clé, et les RPC `security invoker` (`cook_recipe`…) fonctionnent sans paramètre `user_id`.
 
@@ -47,6 +47,7 @@ Règle pour les tools : ils reçoivent `db` (`UserDb`) et ne touchent jamais à 
 **Partage des rôles :**
 - **Entrées** : les schémas Zod sont dans `packages/core/src/inventory.ts`, partagés avec l'app.
 - **Décisions** : la règle qui choisit entre réapprovisionner, créer ou répondre « ambigu » est `planPurchase`, une fonction pure (`packages/core/src/purchase.ts`).
+- **Opérations** : `_shared/inventory.ts` enchaîne lectures, décision et écritures ; `mcp/tools/inventory.ts` ne garde que les titres et descriptions lus par Claude.
 - **Écritures** : elles passent par les fonctions SQL `add_item`, `restock_item` et `update_item`. Chacune écrit l'article et son `stock_movement` dans la même transaction, sous RLS ; l'app les appellera aussi.
 - **Lectures** : la vue `inventory_status` fournit l'aliment lié et `low_stock`.
 
@@ -70,7 +71,7 @@ Le réassort suit le mode de suivi de l'article :
 
 La réponse a trois listes, `created`, `restocked` et `ambiguous`. Chaque entrée ambiguë porte sa raison, une indication pour Claude (`hint`), et les candidats ou articles à proposer. Claude relance seulement ces articles avec la précision.
 
-**Idempotence** : `idempotency_key` (optionnelle, 8 à 128 caractères) est réservée dans la table `idempotent_call`, dans la même transaction que les écritures. Un appel rejoué avec la même clé, par exemple après un timeout, renvoie la réponse enregistrée avec `replayed: true` et ne réécrit rien. Si l'appel échoue, la clé est libérée avec le reste.
+**Idempotence** : `idempotency_key` (optionnelle, 8 à 128 caractères) est réservée dans la table `idempotent_call`, dans la même transaction que les écritures. Un appel rejoué avec la même clé, par exemple après un timeout, renvoie la réponse enregistrée avec `replayed: true` et ne réécrit rien. Si l'appel échoue, la clé est libérée avec le reste. Si rien n'a été enregistré parce que tous les articles sont ambigus, elle est libérée aussi : la relance avec les précisions peut garder la même clé. Si une partie a été enregistrée, les articles ambigus se relancent avec une nouvelle clé.
 
 ### `update_item`
 
@@ -100,7 +101,7 @@ Une saisie refusée par la base (article introuvable, unité incompatible…) re
 | `update_workout`, `update_weight` | Corrigent une séance ou une pesée |
 
 **Règles communes :**
-- **Entrées** : schémas Zod et logique pure dans `packages/core/src/tracking.ts`.
+- **Entrées** : schémas Zod et logique pure dans `packages/core/src/tracking.ts` ; opérations dans `_shared/tracking.ts`.
 - **Idempotence** : chaque `log_*` exige une `idempotency_key`. Rejoué, il renvoie l'enregistrement existant (`replayed: true`) grâce aux contraintes `unique (user_id, idempotency_key)` de `meal`, `workout` et `body_measure`. Le contenu d'un rejeu est ignoré : pour corriger un enregistrement, il faut une nouvelle clé.
 - **Dates** : elles sont en ISO avec fuseau, et valent maintenant par défaut. Les journées sont découpées à l'heure de Paris (`TIMEZONE`).
 
@@ -154,7 +155,7 @@ Il n'y a aucun objectif ni jugement, et les descriptions des tools rappellent à
 
 ## Logs
 
-Les logs ne contiennent que des événements, des identifiants et des codes d'erreur (`log.ts`), jamais de contenu ni de message d'erreur Postgres, qui peut contenir des valeurs. Événements actuels :
+Les logs ne contiennent que des événements, des identifiants et des codes d'erreur (`_shared/log.ts`), jamais de contenu ni de message d'erreur Postgres, qui peut contenir des valeurs. Événements actuels :
 - `auth_refused`, avec la raison et les en-têtes d'authentification reçus : leur nom, la longueur de leur valeur et si elle commence par `kura_`, jamais la valeur elle-même ;
 - `auth_unavailable`, avec le code ;
 - `mcp_error`, avec le code.
@@ -191,4 +192,4 @@ Pour Claude Code, `.mcp.json` déclare le serveur `kura-local`, avec la clé lue
 
 ## Code partagé avec `packages/core`
 
-La fonction importe `@kura/core` grâce à l'import map de `supabase/functions/mcp/deno.json`, qui pointe vers `packages/core/src`. Deno exige des imports relatifs avec extension, donc `packages/core` écrit les siens avec `.ts` (`./schemas.ts`). Deno est épinglé par pnpm (`devEngines.runtime` du `package.json`, téléchargé à l'installation) : utiliser `pnpm exec deno …`. L'edge runtime Supabase est compatible avec Deno 2.1.
+La fonction importe `@kura/core` (directement et via `_shared`) grâce à l'import map de `supabase/functions/mcp/deno.json`, qui pointe vers `packages/core/src`. Deno exige des imports relatifs avec extension, donc `packages/core` écrit les siens avec `.ts` (`./schemas.ts`). Deno est épinglé par pnpm (`devEngines.runtime` du `package.json`, téléchargé à l'installation) : utiliser `pnpm exec deno …`. L'edge runtime Supabase est compatible avec Deno 2.1.

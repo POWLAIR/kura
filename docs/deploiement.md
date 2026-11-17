@@ -20,11 +20,11 @@ Mise en ligne de Kura sur Supabase, en région UE, puis branchement de Claude su
 pnpm exec supabase login
 pnpm exec supabase link --project-ref <ref>
 pnpm exec supabase db push          # applique supabase/migrations (vérifie la liste avant de valider)
-pnpm functions:deploy               # déploie supabase/functions/mcp (bundling côté Supabase)
+pnpm functions:deploy               # déploie les fonctions de supabase/functions : mcp et api (bundling côté Supabase)
 ```
 
-- **Secrets** : aucun n'est à configurer. La fonction n'utilise que `SUPABASE_DB_URL`, fournie d'office aux Edge Functions. `verify_jwt = false` est repris de `supabase/config.toml`.
-- **`packages/core`** : la fonction l'importe hors de `supabase/functions` (import map `@kura/core`). `--use-api` l'embarque bien ; c'est vérifié au premier déploiement.
+- **Secrets** : aucun n'est à configurer pour `mcp`, qui n'utilise que `SUPABASE_DB_URL`, fournie d'office aux Edge Functions. `api` lit en plus `SUPABASE_URL` et `SUPABASE_ANON_KEY`, fournies elles aussi ; son seul secret, `KURA_APP_ORIGINS`, ne sert qu'à l'app web (voir `docs/api.md`). `verify_jwt` est repris de `supabase/config.toml` : `false` pour `mcp`, `true` pour `api`.
+- **`packages/core`** : les fonctions l'importent hors de `supabase/functions` (import map `@kura/core`). `--use-api` l'embarque bien ; c'est vérifié au premier déploiement.
 - **Mot de passe de la base** : `db push` et `migration list --linked` passent par le rôle de connexion temporaire de la CLI. Une fois `supabase login` fait, ils n'ont pas besoin du mot de passe.
 
 Vérification : sans clé, la fonction doit répondre `401`.

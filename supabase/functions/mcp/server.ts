@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/server";
-import type { Tx } from "./db.ts";
+import type { Tx } from "../_shared/db.ts";
 import { registerInventoryTools } from "./tools/inventory.ts";
 import { registerTrackingTools } from "./tools/tracking.ts";
 
