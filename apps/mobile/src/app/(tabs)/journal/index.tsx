@@ -1,8 +1,6 @@
 import {
   dayLabel,
-  type NutritionSummary,
   nutritionBrief,
-  nutritionRows,
   shiftDay,
   shortDayLabel,
   type TimelineEntry,
@@ -12,12 +10,11 @@ import {
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { NutritionCard } from "@/components/nutrition-card";
 import { Screen } from "@/components/screen";
 import { Button, Choice, Notice, SectionTitle } from "@/components/ui";
 import { type DayView, fetchDay, fetchWeek } from "@/journal/data";
-import { callApi } from "@/lib/api";
 import { errorMessage } from "@/lib/api-error";
-import { confirm } from "@/lib/confirm";
 import { today } from "@/lib/today";
 import { spacing, usePalette } from "@/theme";
 
@@ -27,35 +24,6 @@ type Loaded =
   | { mode: "week"; date: string; week: WeekSummary };
 
 const decimal = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
-
-// Les valeurs principales, telles quelles : ni objectif, ni jugement, ni couleur.
-function NutritionCard({ nutrition }: { nutrition: NutritionSummary }) {
-  const palette = usePalette();
-  return (
-    <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-      {nutritionRows(nutrition).map((row) => (
-        <View key={row.key} style={[styles.nutritionRow, row.detail && styles.nutritionDetail]}>
-          <Text style={{ color: row.detail ? palette.textSecondary : palette.text }}>
-            {row.label}
-          </Text>
-          <Text style={{ color: row.known ? palette.text : palette.textSecondary }}>
-            {row.text}
-          </Text>
-        </View>
-      ))}
-      {nutrition.partial_values ? (
-        <Text style={[styles.note, { color: palette.textSecondary }]}>
-          Valeurs partielles : certains aliments n'ont pas pu être comptés.
-        </Text>
-      ) : null}
-      {nutrition.incomplete.length > 0 ? (
-        <Text style={[styles.note, { color: palette.textSecondary }]}>
-          « Au moins » : la valeur manque pour une partie des aliments.
-        </Text>
-      ) : null}
-    </View>
-  );
-}
 
 const KIND_LABELS = { meal: "Repas", workout: "Séance", weight: "Pesée" } as const;
 
@@ -91,29 +59,14 @@ export default function JournalScreen() {
   const current = loaded !== null && loaded.mode === mode && loaded.date === date ? loaded : null;
   const step = mode === "day" ? 1 : 7;
 
-  async function removeMeal(entry: TimelineEntry) {
-    const confirmed = await confirm(
-      `Supprimer « ${entry.title} » ?`,
-      "Le repas et ses aliments sont supprimés. Pour le corriger, supprime-le puis ressaisis-le. Le stock n'est pas modifié.",
-      "Supprimer",
-    );
-    if (!confirmed) return;
-    try {
-      await callApi("delete_entry", { kind: "meal", id: entry.id });
-      await load();
-    } catch (error) {
-      setProblem(errorMessage(error));
-    }
-  }
+  const SHEETS = {
+    meal: "/journal/fiche-repas",
+    workout: "/journal/seance",
+    weight: "/journal/pesee",
+  } as const;
 
   function open(entry: TimelineEntry) {
-    if (entry.kind === "meal") removeMeal(entry);
-    else {
-      router.push({
-        pathname: entry.kind === "workout" ? "/journal/seance" : "/journal/pesee",
-        params: { id: String(entry.id) },
-      });
-    }
+    router.push({ pathname: SHEETS[entry.kind], params: { id: String(entry.id) } });
   }
 
   return (
@@ -180,7 +133,7 @@ export default function JournalScreen() {
             return (
               <Pressable
                 accessibilityHint={
-                  entry.kind === "meal" ? "Propose de supprimer ce repas" : "Ouvre pour corriger"
+                  entry.kind === "meal" ? "Ouvre le détail du repas" : "Ouvre pour corriger"
                 }
                 accessibilityLabel={`${entry.time}, ${KIND_LABELS[entry.kind]}, ${entry.title}${entry.detail ? `, ${entry.detail}` : ""}`}
                 accessibilityRole="button"
@@ -274,10 +227,6 @@ export default function JournalScreen() {
 
 const styles = StyleSheet.create({
   dateBar: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  card: { borderWidth: 1, borderRadius: 12, padding: spacing.md, gap: spacing.xs },
-  nutritionRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.md },
-  nutritionDetail: { paddingLeft: spacing.md },
-  note: { fontSize: 13, lineHeight: 18, marginTop: spacing.xs },
   entry: {
     flexDirection: "row",
     gap: spacing.md,
