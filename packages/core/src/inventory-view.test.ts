@@ -6,6 +6,7 @@ import {
   formatAmount,
   formatDateInput,
   groupInventory,
+  kitchenGreeting,
   parseDateInput,
 } from "./inventory-view.ts";
 
@@ -73,6 +74,28 @@ describe("expiringSoon", () => {
       "Yaourts",
     ]);
     expect(expiringSoon([], TODAY)).toEqual([]);
+  });
+});
+
+describe("kitchenGreeting", () => {
+  it("propose de cuisiner ce qui périme bientôt, jamais ce qui est déjà périmé", () => {
+    const items = [
+      { name: "Crème", expires_on: "2026-11-02" },
+      { name: "Yaourts", expires_on: "2026-11-14" },
+    ];
+    expect(kitchenGreeting(items, TODAY)).toBe("« Yaourts » attend son tour. On le cuisine ?");
+  });
+
+  it("signale un produit périmé à vérifier, sans proposer de le cuisiner", () => {
+    const greeting = kitchenGreeting([{ name: "Crème", expires_on: "2026-11-02" }], TODAY);
+    expect(greeting).toMatch(/^« Crème » a passé sa date/);
+    expect(greeting).not.toMatch(/cuisine/);
+  });
+
+  it("reste neutre quand rien n'est à surveiller", () => {
+    expect(kitchenGreeting([{ name: "Riz", expires_on: "2027-01-01" }], TODAY)).toBe(
+      "Tout est en ordre dans la cuisine.",
+    );
   });
 });
 

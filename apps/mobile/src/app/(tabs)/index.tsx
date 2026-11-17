@@ -1,4 +1,11 @@
-import { expiringSoon, expiryLabel, formatAmount, timelineOf } from "@kura/core";
+import {
+  expiringSoon,
+  expiryLabel,
+  formatAmount,
+  kitchenGreeting,
+  TIMEZONE,
+  timelineOf,
+} from "@kura/core";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
@@ -13,7 +20,7 @@ import { today } from "@/lib/today";
 import { spacing, usePalette } from "@/theme";
 
 const longDate = new Intl.DateTimeFormat("fr-FR", {
-  timeZone: "Europe/Paris",
+  timeZone: TIMEZONE,
   weekday: "long",
   day: "numeric",
   month: "long",
@@ -48,7 +55,6 @@ export default function HomeScreen() {
   const toWatch = expiringSoon(inventory.items, now);
   const entries = day ? timelineOf(day.summary) : [];
   const meals = day?.summary.meals.length ?? 0;
-  const [first] = toWatch;
 
   return (
     <Screen title="Accueil">
@@ -57,9 +63,7 @@ export default function HomeScreen() {
         <View style={styles.heroText}>
           <Text style={{ color: palette.textSecondary }}>{longDate.format(new Date())}</Text>
           <Text style={[styles.greeting, { color: palette.text }]}>
-            {first
-              ? `« ${first.name} » attend son tour. On le cuisine ?`
-              : "Tout est en ordre dans la cuisine."}
+            {kitchenGreeting(inventory.items, now)}
           </Text>
         </View>
       </View>
