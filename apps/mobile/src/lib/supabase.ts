@@ -11,6 +11,9 @@ const env = readEnv({
   EXPO_PUBLIC_SUPABASE_KEY: process.env.EXPO_PUBLIC_SUPABASE_KEY,
 });
 
+// Adresse du projet : sert aussi à afficher celle du connecteur Claude.
+export const supabaseUrl = env.supabaseUrl.replace(/\/+$/, "");
+
 // Client Supabase de l'app : clé publique et session de l'utilisateur, donc RLS partout.
 // La session est gardée sur l'appareil, chiffrée sur mobile (voir auth/session-storage.ts).
 export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseKey, {

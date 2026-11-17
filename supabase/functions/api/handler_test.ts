@@ -1,6 +1,7 @@
+import { hashApiKey, isApiKey } from "@kura/core";
 import { assertEquals, assertRejects } from "@std/assert";
 import { parseOrigins } from "../_shared/cors.ts";
-import { asUser, connect } from "../_shared/db.ts";
+import { asUser, connect, findCaller } from "../_shared/db.ts";
 import { AuthUnavailableError, authUserFinder, bearerToken } from "../_shared/session.ts";
 import { createHandler, type HandlerDeps } from "./handler.ts";
 
@@ -339,6 +340,41 @@ Deno.test({
           const { data } = await call(user, "get_summary", { period: "day" });
           assertEquals(data.weights.length, 1);
           assertEquals((await call(other, "get_summary", { period: "day" })).data.weights, []);
+        },
+      );
+      await t.step(
+        "clés du connecteur : créée une fois, révoquée par son propriétaire",
+        async () => {
+          const logs = await capturingLogs(async () => {
+            const created = await call(user, "create_api_key", { label: " Claude mobile " });
+            assertEquals(created.status, 200);
+            const { key, secret } = created.data;
+            assertEquals(isApiKey(secret), true);
+            assertEquals(
+              [key.label, key.key_prefix, key.revoked_at],
+              ["Claude mobile", secret.slice(0, 12), null],
+            );
+            // Seul le hash est en base, et la clé ouvre bien le serveur MCP pour cet utilisateur.
+            const [row] = await sql`select key_hash from public.api_key where id = ${key.id}`;
+            assertEquals(row?.key_hash, await hashApiKey(secret));
+            assertEquals((await findCaller(sql, await hashApiKey(secret)))?.userId, user);
+
+            const foreign = await call(other, "revoke_api_key", { id: key.id });
+            assertEquals([foreign.status, foreign.data.error.code], [422, "refused"]);
+
+            const revoked = await call(user, "revoke_api_key", { id: key.id });
+            assertEquals(revoked.status, 200);
+            assertEquals(revoked.data.revoked.revoked_at !== null, true);
+            assertEquals(await findCaller(sql, await hashApiKey(secret)), null);
+
+            const again = await call(user, "revoke_api_key", { id: key.id });
+            assertEquals([again.status, again.data.error.code], [422, "refused"]);
+
+            const unnamed = await call(user, "create_api_key", { label: " " });
+            assertEquals(unnamed.status, 400);
+          });
+          // Aucune clé, aucun libellé dans les logs.
+          assertEquals(logs, []);
         },
       );
     } finally {

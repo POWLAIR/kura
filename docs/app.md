@@ -68,7 +68,7 @@ apps/mobile/
 - **Aujourd'hui** : les repas, séances et pesées du jour, lus par `get_summary` comme le Journal ; seulement leur nombre et les minutes de sport, le détail est dans le Journal.
 - **À surveiller** : les articles périmés ou qui périment dans les trois jours (`expiringSoon`), le plus proche d'abord ; un appui ouvre la fiche.
 
-Le bouton « Qu'est-ce que je mange ? » arrive en phase 3. « Se déconnecter » reste ici en attendant les réglages.
+Le bouton « Qu'est-ce que je mange ? » arrive en phase 3. « Réglages » mène aux clés du connecteur et à la déconnexion.
 
 ## Onglet Cuisine
 
@@ -106,6 +106,17 @@ Les saisies sont validées par les schémas Zod de `packages/core` (`PurchaseIte
 - **Dates et heures** : tapées (`12/11`, `12h30`) et converties à l'heure de Paris (`zonedIso`) ; sans année, une date du journal est la dernière fois qu'elle est arrivée.
 
 Hors de cette version : le détail nutritionnel et les fiches « À quoi ça sert » (phase 3), la tendance de poids lissée (phase 4).
+
+## Réglages
+
+Accueil → « Réglages » (`src/app/reglages.tsx`).
+
+- **Clés du connecteur Claude** : la liste (nom, 12 premiers caractères, création, dernière utilisation, révoquée ou non) est lue directement dans `api_key`, sous RLS, sans jamais sélectionner le hash.
+- **Créer une clé** : opération `create_api_key`. La clé est générée et hachée par la fonction `api` ; elle revient en clair dans la réponse et s'affiche une seule fois. Seul son hash SHA-256 est en base.
+- **Révoquer** : opération `revoke_api_key`, après confirmation. Le serveur MCP refuse la clé dès la requête suivante ; elle ne peut pas être réactivée.
+- **Se déconnecter**.
+
+`pnpm mcp:key` reste utilisable depuis un terminal (voir `docs/mcp.md`).
 
 ## Vérifications
 

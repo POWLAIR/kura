@@ -25,6 +25,8 @@ supabase/functions/
 
 Une opération ajoutée à `OPERATIONS` est disponible dans l'API ; elle devient un tool MCP quand on lui écrit sa description dans `mcp/tools/`.
 
+Deux opérations sont réservées à l'app et n'ont pas de tool MCP : `create_api_key` et `revoke_api_key` (clés du connecteur, `_shared/api-keys.ts`).
+
 Ce qui reste en direct dans l'app, avec supabase-js : les lectures simples (vue `inventory_status`, tables sous RLS) et les RPC unitaires (`update_item`…).
 
 ## Appel
