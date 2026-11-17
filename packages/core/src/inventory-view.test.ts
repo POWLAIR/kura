@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  expiringSoon,
   expiryLabel,
   expiryStatus,
   formatAmount,
   formatDateInput,
   groupInventory,
+  kitchenGreeting,
   parseDateInput,
 } from "./inventory-view.ts";
 
@@ -53,6 +55,47 @@ describe("expiryStatus et expiryLabel", () => {
     expect(expiryLabel("2026-11-13", TODAY)).toBe("Périme demain");
     expect(expiryLabel("2026-11-14", TODAY)).toBe("Périme dans 2 jours");
     expect(expiryLabel("2026-12-24", TODAY)).toBe("Jusqu'au 24 décembre");
+  });
+});
+
+describe("expiringSoon", () => {
+  it("garde ce qui est périmé ou périme dans les trois jours, le plus proche d'abord", () => {
+    const items = [
+      { name: "Riz", expires_on: null },
+      { name: "Yaourts", expires_on: "2026-11-15" },
+      { name: "Lait", expires_on: "2026-11-16" },
+      { name: "Crème", expires_on: "2026-11-10" },
+      { name: "Beurre", expires_on: "2026-11-15" },
+      { name: "Sel" },
+    ];
+    expect(expiringSoon(items, TODAY).map((item) => item.name)).toEqual([
+      "Crème",
+      "Beurre",
+      "Yaourts",
+    ]);
+    expect(expiringSoon([], TODAY)).toEqual([]);
+  });
+});
+
+describe("kitchenGreeting", () => {
+  it("propose de cuisiner ce qui périme bientôt, jamais ce qui est déjà périmé", () => {
+    const items = [
+      { name: "Crème", expires_on: "2026-11-02" },
+      { name: "Yaourts", expires_on: "2026-11-14" },
+    ];
+    expect(kitchenGreeting(items, TODAY)).toBe("« Yaourts » attend son tour. On le cuisine ?");
+  });
+
+  it("signale un produit périmé à vérifier, sans proposer de le cuisiner", () => {
+    const greeting = kitchenGreeting([{ name: "Crème", expires_on: "2026-11-02" }], TODAY);
+    expect(greeting).toMatch(/^« Crème » a passé sa date/);
+    expect(greeting).not.toMatch(/cuisine/);
+  });
+
+  it("reste neutre quand rien n'est à surveiller", () => {
+    expect(kitchenGreeting([{ name: "Riz", expires_on: "2027-01-01" }], TODAY)).toBe(
+      "Tout est en ordre dans la cuisine.",
+    );
   });
 });
 

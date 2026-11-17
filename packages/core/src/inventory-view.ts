@@ -138,6 +138,39 @@ export function expiryLabel(expiresOn: string | null | undefined, today: string)
   }
 }
 
+// Les articles à surveiller : déjà périmés ou qui périment dans les EXPIRY_SOON_DAYS jours,
+// la date la plus proche d'abord.
+export function expiringSoon<T extends { name: string; expires_on?: string | null }>(
+  items: T[],
+  today: string,
+): T[] {
+  return items
+    .filter((item) => {
+      const { kind } = expiryStatus(item.expires_on, today);
+      return kind === "expired" || kind === "soon";
+    })
+    .sort(
+      (a, b) =>
+        (a.expires_on ?? "").localeCompare(b.expires_on ?? "") ||
+        a.name.localeCompare(b.name, "fr"),
+    );
+}
+
+// Phrase du compagnon provisoire, sur la cuisine seulement. Il propose de cuisiner un produit
+// qui périme bientôt, jamais un produit déjà périmé : celui-là, il le signale à vérifier.
+export function kitchenGreeting(
+  items: { name: string; expires_on?: string | null }[],
+  today: string,
+): string {
+  const watched = expiringSoon(items, today);
+  const soon = watched.find((item) => expiryStatus(item.expires_on, today).kind === "soon");
+  if (soon) return `« ${soon.name} » attend son tour. On le cuisine ?`;
+  const expired = watched[0];
+  if (expired)
+    return `« ${expired.name} » a passé sa date : un coup d'œil avant d'en faire quoi que ce soit.`;
+  return "Tout est en ordre dans la cuisine.";
+}
+
 // ---------------------------------------------------------------------------
 // Saisie d'une date
 // ---------------------------------------------------------------------------
