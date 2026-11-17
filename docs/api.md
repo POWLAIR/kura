@@ -82,10 +82,10 @@ La fonction n'utilise jamais la clé `service_role`.
 L'app Android n'envoie pas d'en-tête `Origin`. Une page web n'est acceptée que depuis :
 
 - `localhost`, pour le développement (`pnpm app`, puis « w ») ;
-- les origines de l'app web, listées dans le secret `KURA_APP_ORIGINS`, séparées par des virgules. À définir quand la PWA sera hébergée (#32) :
+- les origines de l'app web, listées dans le secret `KURA_APP_ORIGINS`, séparées par des virgules. La PWA est servie par GitHub Pages (voir `docs/app.md`), dont l'origine est sans le sous-chemin `/kura` :
 
 ```bash
-pnpm exec supabase secrets set KURA_APP_ORIGINS=https://<domaine de la PWA>
+pnpm exec supabase secrets set KURA_APP_ORIGINS=https://powlair.github.io
 ```
 
 Toute autre origine reçoit un `403`. En local, la passerelle répond elle-même aux requêtes de préflight (`OPTIONS`) ; en ligne, c'est la fonction.

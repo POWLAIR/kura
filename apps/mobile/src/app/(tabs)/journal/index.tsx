@@ -8,7 +8,7 @@ import {
   type WeekSummary,
 } from "@kura/core";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { NutritionCard } from "@/components/nutrition-card";
 import { Screen } from "@/components/screen";
@@ -69,8 +69,42 @@ export default function JournalScreen() {
     router.push({ pathname: SHEETS[entry.kind], params: { id: String(entry.id) } });
   }
 
+  // Les totaux, en seconde colonne sur grand écran, sous la frise sinon.
+  let aside: ReactNode = null;
+  if (current?.mode === "day") {
+    const { summary } = current.day;
+    aside = (
+      <>
+        {summary.meals.length > 0 ? (
+          <>
+            <SectionTitle level={3}>Total des repas</SectionTitle>
+            <NutritionCard nutrition={summary.nutrition} />
+          </>
+        ) : null}
+        {summary.workout_minutes > 0 ? (
+          <Text style={{ color: palette.textSecondary }}>
+            Sport : {summary.workout_minutes} min.
+          </Text>
+        ) : null}
+      </>
+    );
+  } else if (current?.mode === "week") {
+    aside = (
+      <>
+        <SectionTitle level={3}>Total de la semaine</SectionTitle>
+        <NutritionCard nutrition={current.week.nutrition} />
+        <Text style={{ color: palette.textSecondary }}>
+          Sport : {current.week.workout_minutes} min.
+          {current.week.weight
+            ? ` Poids moyen : ${decimal.format(current.week.weight.average_kg)} kg (${current.week.weight.measures} ${current.week.weight.measures > 1 ? "pesées" : "pesée"}).`
+            : ""}
+        </Text>
+      </>
+    );
+  }
+
   return (
-    <Screen title="Journal">
+    <Screen aside={aside} title="Journal">
       <Choice
         label="Affichage"
         onChange={setMode}
@@ -156,18 +190,6 @@ export default function JournalScreen() {
               </Pressable>
             );
           })}
-
-          {current.day.summary.meals.length > 0 ? (
-            <>
-              <SectionTitle level={3}>Total des repas</SectionTitle>
-              <NutritionCard nutrition={current.day.summary.nutrition} />
-            </>
-          ) : null}
-          {current.day.summary.workout_minutes > 0 ? (
-            <Text style={{ color: palette.textSecondary }}>
-              Sport : {current.day.summary.workout_minutes} min.
-            </Text>
-          ) : null}
         </>
       ) : null}
 
@@ -210,15 +232,6 @@ export default function JournalScreen() {
               </View>
             </Pressable>
           ))}
-
-          <SectionTitle level={3}>Total de la semaine</SectionTitle>
-          <NutritionCard nutrition={current.week.nutrition} />
-          <Text style={{ color: palette.textSecondary }}>
-            Sport : {current.week.workout_minutes} min.
-            {current.week.weight
-              ? ` Poids moyen : ${decimal.format(current.week.weight.average_kg)} kg (${current.week.weight.measures} ${current.week.weight.measures > 1 ? "pesées" : "pesée"}).`
-              : ""}
-          </Text>
         </>
       ) : null}
     </Screen>

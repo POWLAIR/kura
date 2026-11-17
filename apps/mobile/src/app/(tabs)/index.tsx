@@ -55,8 +55,46 @@ export default function HomeScreen() {
   const entries = day ? timelineOf(day.summary) : [];
   const meals = day?.summary.meals.length ?? 0;
 
+  const aside = (
+    <>
+      <SectionTitle>À surveiller</SectionTitle>
+      {inventory.loading ? <ActivityIndicator color={palette.accent} /> : null}
+      {inventory.error ? <Notice problem>{inventory.error}</Notice> : null}
+      {!inventory.loading && !inventory.error && toWatch.length === 0 ? (
+        <Text style={{ color: palette.textSecondary }}>Rien ne périme dans les trois jours.</Text>
+      ) : null}
+      {toWatch.map((item) => (
+        <Pressable
+          accessibilityHint="Ouvre la fiche de l'article"
+          accessibilityLabel={`${item.name}, ${expiryLabel(item.expires_on, now)}`}
+          accessibilityRole="button"
+          key={item.id}
+          onPress={() =>
+            router.push({ pathname: "/cuisine/[id]", params: { id: String(item.id) } })
+          }
+          style={({ pressed }) => [
+            styles.card,
+            styles.watch,
+            { backgroundColor: palette.surface, borderColor: palette.border },
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <View style={{ flex: 1, gap: spacing.xs }}>
+            <Text style={[styles.name, { color: palette.text }]}>{item.name}</Text>
+            <Text style={{ color: palette.textSecondary }}>{formatAmount(item)}</Text>
+          </View>
+          <Tag strong>{expiryLabel(item.expires_on, now) ?? ""}</Tag>
+        </Pressable>
+      ))}
+
+      <View style={styles.footer}>
+        <Button label="Réglages" onPress={() => router.push("/reglages")} variant="quiet" />
+      </View>
+    </>
+  );
+
   return (
-    <Screen title="Accueil">
+    <Screen aside={aside} title="Accueil">
       <View style={styles.hero}>
         <Companion />
         <View style={styles.heroText}>
@@ -111,40 +149,6 @@ export default function HomeScreen() {
           )}
         </Pressable>
       ) : null}
-
-      <SectionTitle>À surveiller</SectionTitle>
-      {inventory.loading ? <ActivityIndicator color={palette.accent} /> : null}
-      {inventory.error ? <Notice problem>{inventory.error}</Notice> : null}
-      {!inventory.loading && !inventory.error && toWatch.length === 0 ? (
-        <Text style={{ color: palette.textSecondary }}>Rien ne périme dans les trois jours.</Text>
-      ) : null}
-      {toWatch.map((item) => (
-        <Pressable
-          accessibilityHint="Ouvre la fiche de l'article"
-          accessibilityLabel={`${item.name}, ${expiryLabel(item.expires_on, now)}`}
-          accessibilityRole="button"
-          key={item.id}
-          onPress={() =>
-            router.push({ pathname: "/cuisine/[id]", params: { id: String(item.id) } })
-          }
-          style={({ pressed }) => [
-            styles.card,
-            styles.watch,
-            { backgroundColor: palette.surface, borderColor: palette.border },
-            pressed && { opacity: 0.8 },
-          ]}
-        >
-          <View style={{ flex: 1, gap: spacing.xs }}>
-            <Text style={[styles.name, { color: palette.text }]}>{item.name}</Text>
-            <Text style={{ color: palette.textSecondary }}>{formatAmount(item)}</Text>
-          </View>
-          <Tag strong>{expiryLabel(item.expires_on, now) ?? ""}</Tag>
-        </Pressable>
-      ))}
-
-      <View style={styles.footer}>
-        <Button label="Réglages" onPress={() => router.push("/reglages")} variant="quiet" />
-      </View>
     </Screen>
   );
 }

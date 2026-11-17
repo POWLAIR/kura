@@ -6,6 +6,7 @@ import { Screen } from "@/components/screen";
 import { Button, Choice, Notice, SectionTitle, Tag } from "@/components/ui";
 import type { InventoryRow } from "@/inventory/item-form";
 import { useInventory } from "@/inventory/use-inventory";
+import { useWideLayout } from "@/lib/layout";
 import { today } from "@/lib/today";
 import { spacing, usePalette } from "@/theme";
 
@@ -53,6 +54,7 @@ export default function KitchenScreen() {
   const router = useRouter();
   const { items, loading, error, reload } = useInventory();
   const [view, setView] = useState<View_>("stock");
+  const wide = useWideLayout();
   const day = today();
 
   const toRestock = items.filter((item) => item.low_stock);
@@ -95,26 +97,32 @@ export default function KitchenScreen() {
         </Text>
       ) : null}
 
-      {groups.map((group) => (
-        <View key={group.location} style={styles.group}>
-          <SectionTitle>{group.label}</SectionTitle>
-          {group.categories.map((category) => (
-            <View key={category.category} style={styles.category}>
-              <SectionTitle level={3}>{category.label}</SectionTitle>
-              {category.items.map((item) => (
-                <ItemRow day={day} item={item} key={item.id} />
-              ))}
-            </View>
-          ))}
-        </View>
-      ))}
+      <View style={wide ? styles.grid : styles.list}>
+        {groups.map((group) => (
+          <View key={group.location} style={[styles.group, wide && styles.gridGroup]}>
+            <SectionTitle>{group.label}</SectionTitle>
+            {group.categories.map((category) => (
+              <View key={category.category} style={styles.category}>
+                <SectionTitle level={3}>{category.label}</SectionTitle>
+                {category.items.map((item) => (
+                  <ItemRow day={day} item={item} key={item.id} />
+                ))}
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
+  // Sur grand écran, un emplacement (placard, frigo, congélateur) par colonne.
+  list: { gap: spacing.md },
+  grid: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing.lg },
   group: { gap: spacing.sm },
+  gridGroup: { flexGrow: 1, flexBasis: 320, minWidth: 0 },
   category: { gap: spacing.sm, marginTop: spacing.xs },
   row: { borderWidth: 1, borderRadius: 12, padding: spacing.md, gap: spacing.sm },
   rowMain: { flexDirection: "row", justifyContent: "space-between", gap: spacing.md },

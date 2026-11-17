@@ -17,6 +17,8 @@
     },
     "web": {
       "output": "single",
+      "lang": "fr",
+      "description": "Inventaire de cuisine, recettes et journal.",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
