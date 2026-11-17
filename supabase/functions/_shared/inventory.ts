@@ -1,19 +1,21 @@
 import {
   type AddItemsInput,
+  type AddItemsResult,
   type AmbiguityReason,
   createFoodMatcher,
   type Food,
+  type InventoryItemView,
   type InventoryLine,
   type InventoryQuery,
   type PurchaseItem,
   type PurchasePlan,
   planPurchase,
+  type RemoveItemInput,
   type Tables,
   toStockChanges,
   type UpdateItemInput,
 } from "@kura/core";
 import type postgres from "postgres";
-import type { z } from "zod";
 import type { Tx } from "./db.ts";
 import { compact, InputError } from "./errors.ts";
 
@@ -34,7 +36,7 @@ const AMBIGUITY_HINTS: Record<AmbiguityReason, string> = {
 };
 
 // Vue compacte d'un article : les champs vides sont omis.
-function itemView(row: Status) {
+function itemView(row: Status): InventoryItemView {
   const view = {
     id: row.id,
     name: row.name,
@@ -49,7 +51,7 @@ function itemView(row: Status) {
     low_stock: row.low_stock || undefined,
     food: row.food_ref_id ? { id: row.food_ref_id, name: row.food_name } : undefined,
   };
-  return compact(view);
+  return compact(view) as unknown as InventoryItemView;
 }
 
 function lineView(line: InventoryLine) {
@@ -77,7 +79,7 @@ function selectInventory(tx: Tx, query: InventoryQuery) {
     order by location, category, name`;
 }
 
-async function addItems(tx: Tx, items: PurchaseItem[]) {
+async function addItems(tx: Tx, items: PurchaseItem[]): Promise<AddItemsResult> {
   const inventory = await tx<InventoryLine[]>`
     select id, name, location, food_ref_id, quantity, unit, level from public.inventory_item`;
   const foods = await tx<Food[]>`select id, code, name from public.food_ref`;
@@ -134,7 +136,10 @@ async function addItems(tx: Tx, items: PurchaseItem[]) {
 // Rejoué avec la même clé d'idempotence, l'appel renvoie la réponse enregistrée sans rien
 // réécrire. La clé est réservée dans la transaction de l'appel : en cas d'échec, elle est
 // libérée avec le reste ; deux appels simultanés se sérialisent sur la contrainte unique.
-export async function addPurchases(tx: Tx, { items, idempotency_key: key }: AddItemsInput) {
+export async function addPurchases(
+  tx: Tx,
+  { items, idempotency_key: key }: AddItemsInput,
+): Promise<AddItemsResult> {
   if (!key) return addItems(tx, items);
   const [claim] = await tx<{ id: number }[]>`
     insert into public.idempotent_call (idempotency_key, tool) values (${key}, 'add_items')
@@ -148,7 +153,7 @@ export async function addPurchases(tx: Tx, { items, idempotency_key: key }: AddI
         `Clé d'idempotence déjà utilisée par ${previous?.tool ?? "un autre appel"}`,
       );
     }
-    return { replayed: true, ...previous.response };
+    return { replayed: true, ...(previous.response as AddItemsResult) };
   }
   const result = await addItems(tx, items);
   // Rien d'enregistré (tout est ambigu) : la clé est libérée, pour que la relance avec les
@@ -175,7 +180,7 @@ export function getShoppingList(tx: Tx) {
   return getInventory(tx, { low_stock_only: true });
 }
 
-export async function updateItem(tx: Tx, { item_id, changes }: z.infer<typeof UpdateItemInput>) {
+export async function updateItem(tx: Tx, { item_id, changes }: UpdateItemInput) {
   const [before] = await tx<{ unit: string | null }[]>`
     select unit from public.inventory_item where id = ${item_id}`;
   await tx`select public.update_item(${item_id}::bigint, ${tx.json(toStockChanges(changes))}::jsonb)`;
@@ -189,4 +194,13 @@ export async function updateItem(tx: Tx, { item_id, changes }: z.infer<typeof Up
       ? undefined
       : `Suivi changé de « ${from} » à « ${to} » : ancien seuil de rachat effacé, aucun mouvement de stock enregistré.`;
   return { updated: itemView(after), ...(notice && { notice }) };
+}
+
+// L'article quitte l'inventaire : il n'est plus suivi, et son historique de mouvements part
+// avec lui (on delete cascade). Les recettes qui le citaient gardent leurs ingrédients.
+export async function removeItem(tx: Tx, { item_id }: RemoveItemInput) {
+  const [removed] = await tx<{ id: number; name: string }[]>`
+    delete from public.inventory_item where id = ${item_id} returning id, name`;
+  if (!removed) throw new InputError(`Article ${item_id} introuvable (déjà retiré ?)`);
+  return { removed };
 }

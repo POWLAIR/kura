@@ -42,6 +42,7 @@ Règle pour les tools : ils reçoivent `db` (`UserDb`) et ne touchent jamais à 
 | `get_inventory` | Liste le stock, filtrable par catégorie, emplacement ou stock bas |
 | `add_items` | Enregistre des courses : réapprovisionne un article existant ou en crée un |
 | `update_item` | Corrige quantité, niveau, date, emplacement, seuil de rachat, nom, aliment |
+| `remove_item` | Retire définitivement un article de l'inventaire, avec son historique |
 | `get_shopping_list` | Articles au seuil de rachat ou en dessous |
 
 **Partage des rôles :**
@@ -79,6 +80,10 @@ La réponse a trois listes, `created`, `restocked` et `ambiguous`. Chaque entré
 - Passer de la quantité au niveau, ou l'inverse, efface l'ancien suivi et son seuil.
 - Une correction de stock dans la même unité, ou d'un niveau à l'autre, est tracée en `stock_movement` « manuel ».
 - Un changement d'unité ou de mode de suivi est signalé dans la réponse (`notice`), puisqu'il efface le seuil et n'écrit pas de mouvement. Un seuil incompatible avec le mode (seuil en quantité sur un article suivi en niveau) est refusé avec un message en français.
+
+### `remove_item`
+
+L'article est supprimé, et ses `stock_movement` avec lui (`on delete cascade`). La description demande à Claude de confirmer avec l'utilisateur, et de préférer `update_item` pour un article simplement terminé : mis à zéro, il reste dans l'inventaire et dans la liste « À racheter » s'il a un seuil.
 
 ### Liste « À racheter »
 

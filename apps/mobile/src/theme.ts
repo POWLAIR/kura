@@ -10,6 +10,7 @@ const palettes = {
     textSecondary: "#6B6459",
     border: "#DDD5C5",
     accent: "#3F4E8C",
+    accentSoft: "#E3E6F4",
     onAccent: "#FFFFFF",
   },
   dark: {
@@ -19,6 +20,7 @@ const palettes = {
     textSecondary: "#A79F92",
     border: "#3A352D",
     accent: "#9AA8E6",
+    accentSoft: "#2B2F47",
     onAccent: "#15130F",
   },
 } as const;

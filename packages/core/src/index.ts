@@ -2,6 +2,7 @@ export * from "./api-key.ts";
 export type { Database, Json, Tables, TablesInsert, TablesUpdate } from "./database.types.ts";
 export * from "./food-match.ts";
 export * from "./inventory.ts";
+export * from "./inventory-view.ts";
 export * from "./nutrients.ts";
 export * from "./off.ts";
 export * from "./purchase.ts";

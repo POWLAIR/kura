@@ -310,6 +310,22 @@ Deno.test({
         );
       });
 
+      await t.step("remove_item : seul son propriétaire retire un article", async () => {
+        const foreign = await call(other, "remove_item", { item_id: itemId });
+        assertEquals([foreign.status, foreign.data.error.code], [422, "refused"]);
+
+        const removed = await call(user, "remove_item", { item_id: itemId });
+        assertEquals(removed.status, 200);
+        assertEquals(removed.data.removed, { id: itemId, name: `Gomasio ${tag}` });
+        assertEquals(
+          [...(await sql`select 1 from public.stock_movement where inventory_item_id = ${itemId}`)],
+          [],
+        );
+
+        const again = await call(user, "remove_item", { item_id: itemId });
+        assertEquals([again.status, again.data.error.code], [422, "refused"]);
+      });
+
       await t.step(
         "suivi : pesée enregistrée une fois, visible dans le résumé du jour",
         async () => {
