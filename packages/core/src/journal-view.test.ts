@@ -49,17 +49,27 @@ describe("nutritionRows", () => {
 });
 
 describe("nutritionBrief", () => {
-  it("résume les valeurs connues sur une ligne", () => {
+  it("dit « non renseignée » au lieu d'omettre une valeur", () => {
+    expect(
+      nutritionBrief({ energy_kcal: 539, carbs_g: 80, incomplete: [], partial_values: false }),
+    ).toBe("539 kcal · protéines non renseignée · glucides 80 g · lipides non renseignée");
+    expect(nutritionBrief({ protein_g: 0, incomplete: [], partial_values: false })).toBe(
+      "énergie non renseignée · protéines 0 g · glucides non renseignée · lipides non renseignée",
+    );
+  });
+
+  it("résume les quatre valeurs sur une ligne", () => {
     expect(
       nutritionBrief({
         energy_kcal: 539,
         protein_g: 6.3,
+        carbs_g: 57.5,
         fat_g: 30.9,
         salt_g: 0.1,
         incomplete: ["fat_g"],
         partial_values: false,
       }),
-    ).toBe("539 kcal · protéines 6,3 g · lipides au moins 30,9 g");
+    ).toBe("539 kcal · protéines 6,3 g · glucides 57,5 g · lipides au moins 30,9 g");
   });
 
   it("le dit quand rien n'est renseigné", () => {

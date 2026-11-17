@@ -102,7 +102,7 @@ Les saisies sont validées par les schémas Zod de `packages/core` (`PurchaseIte
 - **Valeurs** : une valeur absente s'écrit « non renseignée », jamais zéro ; un total dont il manque une partie s'écrit « au moins … » ; un repas dont un aliment n'a pas pu être compté est « valeurs partielles ». Ni objectif, ni jugement, ni couleur.
 - **Saisir** : une séance (`journal/seance.tsx`), une pesée (`journal/pesee.tsx`), un repas (`journal/repas.tsx`). Le repas se compose d'aliments cherchés par leur nom dans `food_ref`, ou d'un produit scanné ; la quantité se donne dans l'unité dite (g, ml, pièce…) et l'enregistrement passe par `log_meal`, qui calcule les valeurs côté serveur.
 - **Poids d'une pièce, densité** : quand `log_meal` signale une conversion manquante, l'écran demande la mesure à l'utilisateur (`set_food_conversion`) ; rien n'est estimé, et « Plus tard » laisse le repas en valeurs partielles.
-- **Corriger** : un appui sur une séance ou une pesée ouvre sa fiche (`update_workout`, `update_weight`, suppression). Un repas se supprime puis se ressaisit, comme avec les tools MCP (`delete_entry`).
+- **Corriger** : un appui sur une séance ou une pesée ouvre sa fiche (`update_workout`, `update_weight`, suppression). Un appui sur un repas ouvre sa fiche (`journal/fiche-repas.tsx`) : ses aliments tels que dits, leurs grammes, leur aliment de référence et ses valeurs ; il s'y supprime, puis se ressaisit, comme avec les tools MCP (`delete_entry`).
 - **Dates et heures** : tapées (`12/11`, `12h30`) et converties à l'heure de Paris (`zonedIso`) ; sans année, une date du journal est la dernière fois qu'elle est arrivée.
 
 Hors de cette version : le détail nutritionnel et les fiches « À quoi ça sert » (phase 3), la tendance de poids lissée (phase 4).

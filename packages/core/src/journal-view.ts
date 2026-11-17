@@ -77,15 +77,19 @@ export function nutritionRows(summary: NutritionSummary): NutritionRow[] {
 const BRIEF_KEYS = ["energy_kcal", "protein_g", "carbs_g", "fat_g"] as const;
 
 // Les quatre valeurs les plus lues, sur une ligne : « 539 kcal · protéines 6,3 g · … ».
-// Celles qui ne sont pas renseignées sont omises ; aucune ne l'est : « Valeurs non
+// Une valeur absente est dite « non renseignée », jamais omise : on distingue ainsi « pas
+// de protéines » de « protéines inconnues ». Aucune n'est renseignée : « Valeurs non
 // renseignées ».
 export function nutritionBrief(summary: NutritionSummary): string {
-  const parts = nutritionRows(summary)
-    .filter((row) => row.known && (BRIEF_KEYS as readonly string[]).includes(row.key))
+  const rows = nutritionRows(summary).filter((row) =>
+    (BRIEF_KEYS as readonly string[]).includes(row.key),
+  );
+  if (!rows.some((row) => row.known)) return "Valeurs non renseignées";
+  return rows
     .map((row) =>
-      row.key === "energy_kcal" ? row.text : `${row.label.toLowerCase()} ${row.text}`,
-    );
-  return parts.length > 0 ? parts.join(" · ") : "Valeurs non renseignées";
+      row.key === "energy_kcal" && row.known ? row.text : `${row.label.toLowerCase()} ${row.text}`,
+    )
+    .join(" · ");
 }
 
 // ---------------------------------------------------------------------------

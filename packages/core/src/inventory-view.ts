@@ -156,6 +156,21 @@ export function expiringSoon<T extends { name: string; expires_on?: string | nul
     );
 }
 
+// Phrase du compagnon provisoire, sur la cuisine seulement. Il propose de cuisiner un produit
+// qui périme bientôt, jamais un produit déjà périmé : celui-là, il le signale à vérifier.
+export function kitchenGreeting(
+  items: { name: string; expires_on?: string | null }[],
+  today: string,
+): string {
+  const watched = expiringSoon(items, today);
+  const soon = watched.find((item) => expiryStatus(item.expires_on, today).kind === "soon");
+  if (soon) return `« ${soon.name} » attend son tour. On le cuisine ?`;
+  const expired = watched[0];
+  if (expired)
+    return `« ${expired.name} » a passé sa date : un coup d'œil avant d'en faire quoi que ce soit.`;
+  return "Tout est en ordre dans la cuisine.";
+}
+
 // ---------------------------------------------------------------------------
 // Saisie d'une date
 // ---------------------------------------------------------------------------
