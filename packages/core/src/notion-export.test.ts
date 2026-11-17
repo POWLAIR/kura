@@ -8,6 +8,7 @@ import {
   planNotionSync,
   rowOf,
   rowOfPage,
+  schemaProblems,
 } from "./notion-export.ts";
 
 const rice: InventoryItemView = {
@@ -87,6 +88,7 @@ describe("planNotionSync", () => {
       create: [rowOf(rice), rowOf(soy)],
       update: [],
       trash: [],
+      ignored: 0,
     });
   });
 
@@ -99,6 +101,7 @@ describe("planNotionSync", () => {
       create: [],
       update: [{ pageId: "page-soja", row: rowOf(soy) }],
       trash: [],
+      ignored: 0,
     });
   });
 
@@ -112,17 +115,47 @@ describe("planNotionSync", () => {
     ]);
   });
 
-  it("met à la corbeille les articles retirés, les doublons et les pages ajoutées à la main", () => {
+  it("met à la corbeille les articles retirés et les doublons de l'export", () => {
     const pages = [
       pageOf("page-riz", notionProperties(rowOf(rice))),
       pageOf("page-riz-bis", notionProperties(rowOf(rice))),
       pageOf("page-retiree", notionProperties({ ...rowOf(soy), id: 99 })),
-      { id: "page-main", properties: { [NOTION_PROPS.name]: { title: [{ plain_text: "Note" }] } } },
     ];
     expect(planNotionSync([rice], pages)).toEqual({
       create: [],
       update: [],
-      trash: ["page-riz-bis", "page-main", "page-retiree"],
+      trash: ["page-riz-bis", "page-retiree"],
+      ignored: 0,
     });
+  });
+
+  it("ne touche jamais une page sans « Kura id » : l'export ne l'a pas créée", () => {
+    const pages = [
+      { id: "page-main", properties: { [NOTION_PROPS.name]: { title: [{ plain_text: "Note" }] } } },
+      { id: "page-autre-base", properties: {} },
+    ];
+    expect(planNotionSync([], pages)).toEqual({ create: [], update: [], trash: [], ignored: 2 });
+  });
+});
+
+describe("schemaProblems", () => {
+  const schema = Object.fromEntries(
+    Object.entries(NOTION_SCHEMA).map(([name, value]) => [name, { type: Object.keys(value)[0] }]),
+  );
+
+  it("accepte la base créée par notion:setup, même avec des propriétés en plus", () => {
+    expect(schemaProblems(schema)).toEqual([]);
+    expect(schemaProblems({ ...schema, Notes: { type: "rich_text" } })).toEqual([]);
+  });
+
+  it("refuse une base qui n'a pas les propriétés de l'export", () => {
+    expect(
+      schemaProblems({ Name: { type: "title" }, Tags: { type: "multi_select" } }),
+    ).toHaveLength(7);
+    const { [NOTION_PROPS.id]: _id, ...withoutId } = schema;
+    expect(schemaProblems(withoutId)).toEqual(["propriété « Kura id » absente"]);
+    expect(schemaProblems({ ...schema, [NOTION_PROPS.restock]: { type: "select" } })).toEqual([
+      "propriété « À racheter » de type select au lieu de checkbox",
+    ]);
   });
 });

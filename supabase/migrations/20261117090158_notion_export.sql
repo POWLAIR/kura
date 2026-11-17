@@ -1,7 +1,8 @@
 -- Export à sens unique de l'inventaire vers Notion (issue #29). Voir docs/notion.md.
 --
 -- 1. notion_export : la base Notion (source de données) de l'utilisateur, et l'état de
---    l'export. Créée par le script notion:setup.
+--    l'export. Écrite par le script notion:setup (clé de service) : l'utilisateur ne peut
+--    que la lire ou la supprimer, il ne choisit pas la base où écrit le jeton du serveur.
 -- 2. Un déclencheur sur inventory_item compte chaque modification (changes) ; un export
 --    réussi marque comme exportées les modifications qu'il a vues (synced_changes). Un
 --    compteur, pas une date : une modification validée pendant un export n'est pas perdue.
@@ -23,6 +24,9 @@ create table public.notion_export (
   synced_at timestamptz,
   -- Code de la dernière erreur d'export (ex. notion_401), effacé par un export réussi.
   last_error text,
+  -- Export en cours depuis cette date : un seul à la fois par utilisateur. Libéré à la fin
+  -- de l'export, ou après 10 minutes si la fonction s'est arrêtée en route.
+  export_started_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -33,13 +37,10 @@ alter table public.notion_export enable row level security;
 revoke all on public.notion_export from anon;
 revoke truncate, references, trigger on public.notion_export from authenticated;
 
+-- L'utilisateur lit sa ligne, ou la supprime pour arrêter l'export ; rien d'autre.
+revoke insert, update on public.notion_export from authenticated;
 create policy "notion_export : lecture de sa ligne" on public.notion_export
   for select to authenticated using ((select auth.uid()) = user_id);
-create policy "notion_export : ajout de sa ligne" on public.notion_export
-  for insert to authenticated with check ((select auth.uid()) = user_id);
-create policy "notion_export : modification de sa ligne" on public.notion_export
-  for update to authenticated
-  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "notion_export : suppression de sa ligne" on public.notion_export
   for delete to authenticated using ((select auth.uid()) = user_id);
 
@@ -47,13 +48,14 @@ create policy "notion_export : suppression de sa ligne" on public.notion_export
 -- Modification de l'inventaire : à exporter
 -- ---------------------------------------------------------------------------
 
--- security invoker : la RLS de l'utilisateur s'applique, il ne marque que sa propre ligne.
--- Sans ligne notion_export, rien ne se passe. Le verrou de ligne de l'update fait passer les
--- incréments un par un.
+-- security definer : l'utilisateur ne peut pas modifier notion_export lui-même. La fonction
+-- ne fait qu'incrémenter le compteur du propriétaire de l'article modifié, que la RLS de
+-- inventory_item a déjà vérifié. Sans ligne notion_export, rien ne se passe. Le verrou de
+-- ligne de l'update fait passer les incréments un par un.
 create function public.mark_notion_export()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = ''
 as $$
 begin
@@ -73,8 +75,11 @@ create trigger inventory_item_notion_export
 -- ---------------------------------------------------------------------------
 
 -- Utilisateurs dont l'inventaire a changé depuis le dernier export, et plus depuis
--- p_quiet : on attend la fin d'une rafale de modifications.
-create function public.notion_exports_due(p_quiet interval default interval '15 seconds')
+-- p_quiet (on attend la fin d'une rafale de modifications), sans export en cours.
+create function public.notion_exports_due(
+  p_quiet interval default interval '15 seconds',
+  p_lease interval default interval '10 minutes'
+)
 returns table (user_id uuid, data_source_id text, changes bigint)
 language sql
 stable
@@ -85,7 +90,28 @@ as $$
   from public.notion_export e
   where e.changes > e.synced_changes
     and e.changed_at <= clock_timestamp() - p_quiet
+    and (e.export_started_at is null or e.export_started_at < clock_timestamp() - p_lease)
   order by e.changed_at;
+$$;
+
+-- Réserve les exports à faire, en une requête : deux appels simultanés de la fonction ne
+-- réservent jamais le même utilisateur (les conditions portent sur la ligne elle-même, et
+-- le second update les réévalue après le premier). Renvoie les exports réservés.
+create function public.claim_notion_exports(
+  p_quiet interval default interval '15 seconds',
+  p_lease interval default interval '10 minutes'
+)
+returns table (user_id uuid, data_source_id text, changes bigint)
+language sql
+security invoker
+set search_path = ''
+as $$
+  update public.notion_export e
+  set export_started_at = clock_timestamp()
+  where e.changes > e.synced_changes
+    and e.changed_at <= clock_timestamp() - p_quiet
+    and (e.export_started_at is null or e.export_started_at < clock_timestamp() - p_lease)
+  returning e.user_id, e.data_source_id, e.changes;
 $$;
 
 -- Appelée par pg_cron : demande l'export à la fonction notion-export s'il y en a un à faire.
@@ -119,7 +145,9 @@ end;
 $$;
 
 -- Réservées au serveur : ni l'app ni les tools MCP ne les appellent.
-revoke all on function public.notion_exports_due(interval) from public, anon, authenticated;
+revoke all on function public.notion_exports_due(interval, interval) from public, anon, authenticated;
+revoke all on function public.claim_notion_exports(interval, interval) from public, anon, authenticated;
+revoke all on function public.mark_notion_export() from public, anon, authenticated;
 revoke all on function public.request_notion_export() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------

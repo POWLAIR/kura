@@ -134,7 +134,6 @@ Deno.test({
           await tx`insert into public.body_measure (measured_at, weight_kg) values (now(), 70)`;
           await tx`select public.set_food_conversion(${food?.id ?? null}, '{"piece_weight_g": 60}')`;
           await tx`insert into public.companion_event (type) values ('test')`;
-          await tx`insert into public.notion_export (data_source_id) values ('0123456789abcdef0123456789abcdef')`;
           await tx`insert into public.api_key (label, key_prefix, key_hash)
                    values ('Test', 'kura_AbCdEfG', ${crypto.randomUUID().replaceAll("-", "").padEnd(64, "0")})`;
           await tx`insert into public.idempotent_call (idempotency_key, tool) values (${`cle-${id}`}, 'add_items')`;
@@ -143,6 +142,11 @@ Deno.test({
           await tx`insert into public.recipe_ingredient (recipe_id, inventory_item_id, quantity, unit)
                    values (${recipe?.id ?? null}, ${item?.id ?? null}, 100, 'g')`;
         });
+      }
+      // notion_export ne s'écrit que par notion:setup (clé de service), comme ici.
+      for (const id of [user, other]) {
+        await sql`insert into public.notion_export (user_id, data_source_id)
+                  values (${id}, '0123456789abcdef0123456789abcdef')`;
       }
       const before = await rowsOf(user);
       const untouched = Object.entries(before)

@@ -1,4 +1,4 @@
-import { NOTION_VERSION, type NotionPage } from "@kura/core";
+import { NOTION_VERSION, type NotionPage, type NotionSchema } from "@kura/core";
 
 // Client minimal de l'API Notion pour l'export de l'inventaire. Seuls l'inventaire et l'id
 // de la source de données partent vers Notion.
@@ -13,6 +13,8 @@ export class NotionError extends Error {
 }
 
 export type NotionClient = {
+  // Propriétés de la source de données : nom → { type }.
+  schema: (dataSourceId: string) => Promise<NotionSchema>;
   queryAll: (dataSourceId: string) => Promise<NotionPage[]>;
   createPage: (dataSourceId: string, properties: Record<string, unknown>) => Promise<void>;
   updatePage: (pageId: string, properties: Record<string, unknown>) => Promise<void>;
@@ -62,6 +64,12 @@ export function createNotionClient({
   }
 
   return {
+    async schema(dataSourceId) {
+      const result = (await call("GET", `/data_sources/${dataSourceId}`)) as {
+        properties?: NotionSchema;
+      };
+      return result.properties ?? {};
+    },
     async queryAll(dataSourceId) {
       const pages: NotionPage[] = [];
       let cursor: string | null = null;

@@ -1,4 +1,4 @@
-import { notionProperties, planNotionSync } from "@kura/core";
+import { notionProperties, planNotionSync, schemaProblems } from "@kura/core";
 import type { Sql, Tx } from "../_shared/db.ts";
 import { getInventory } from "../_shared/inventory.ts";
 import { errorCode, log } from "../_shared/log.ts";
@@ -25,9 +25,19 @@ function sameSecret(a: string, b: string): boolean {
 
 type Due = { user_id: string; data_source_id: string; changes: number };
 
+// Base Notion qui n'a pas la structure attendue : rien n'y est écrit.
+class SchemaError extends Error {
+  code = "notion_schema";
+}
+
 // Aligne la base Notion d'un utilisateur sur son inventaire. Rien n'est relu dans Notion
-// sinon l'id Kura de chaque page : une modification faite dans Notion est réécrite.
+// sinon l'id Kura de chaque page : une modification faite dans Notion est réécrite. Une
+// page sans id Kura n'est jamais touchée.
 async function exportOne(deps: HandlerDeps, due: Due) {
+  // Avant toute écriture : la base est-elle bien celle de l'export ?
+  if (schemaProblems(await deps.notion.schema(due.data_source_id)).length > 0) {
+    throw new SchemaError("Base Notion sans les propriétés de l'export");
+  }
   const { items } = await deps.asUser(due.user_id, (tx) => getInventory(tx, {}));
   const plan = planNotionSync(items, await deps.notion.queryAll(due.data_source_id));
   for (const row of plan.create) {
@@ -37,7 +47,12 @@ async function exportOne(deps: HandlerDeps, due: Due) {
     await deps.notion.updatePage(pageId, notionProperties(row));
   }
   for (const pageId of plan.trash) await deps.notion.trashPage(pageId);
-  return { created: plan.create.length, updated: plan.update.length, trashed: plan.trash.length };
+  return {
+    created: plan.create.length,
+    updated: plan.update.length,
+    trashed: plan.trash.length,
+    ignored: plan.ignored,
+  };
 }
 
 // Export à sens unique : POST /functions/v1/notion-export, appelé par pg_cron avec le
@@ -50,9 +65,10 @@ export function createHandler(deps: HandlerDeps) {
       return new Response(null, { status: 401 });
     }
 
-    // Seule lecture hors RLS : la liste des inventaires à exporter, tous utilisateurs.
+    // Seul accès hors RLS : réserver les inventaires à exporter, tous utilisateurs. Un appel
+    // concurrent (export précédent pas fini) ne réserve pas les mêmes.
     const due = await deps.sql<Due[]>`
-      select * from public.notion_exports_due(make_interval(secs => ${deps.quietSeconds ?? 15}))`;
+      select * from public.claim_notion_exports(make_interval(secs => ${deps.quietSeconds ?? 15}))`;
 
     let exported = 0;
     let failed = 0;
@@ -74,6 +90,9 @@ export function createHandler(deps: HandlerDeps) {
           update public.notion_export set last_error = ${code} where user_id = ${entry.user_id}`;
         log("notion_export_error", { user_id: entry.user_id, code });
         failed++;
+      } finally {
+        await deps.sql`
+          update public.notion_export set export_started_at = null where user_id = ${entry.user_id}`;
       }
     }
     return Response.json({ exported, failed });

@@ -109,22 +109,25 @@ const same = (a: NotionRow, b: NotionRow) => JSON.stringify(a) === JSON.stringif
 export type NotionSyncPlan = {
   create: NotionRow[];
   update: { pageId: string; row: NotionRow }[];
-  // Pages sans article en face (article retiré, doublon, page ajoutée à la main).
+  // Pages de l'export sans article en face : article retiré, ou doublon.
   trash: string[];
+  // Pages sans « Kura id » : jamais touchées, l'export ne les a pas créées.
+  ignored: number;
 };
 
 // Le moins d'appels possible : créer ce qui manque, réécrire ce qui diffère, mettre à la
-// corbeille le reste. Une page identique à l'inventaire n'est pas touchée.
+// corbeille les pages de l'export devenues inutiles. Une page identique à l'inventaire n'est
+// pas touchée ; une page sans « Kura id » non plus, quelle qu'elle soit.
 export function planNotionSync(items: InventoryItemView[], pages: NotionPage[]): NotionSyncPlan {
   const byId = new Map<number, { pageId: string; row: NotionRow }>();
-  const trash: string[] = [];
+  const plan: NotionSyncPlan = { create: [], update: [], trash: [], ignored: 0 };
   for (const page of pages) {
     const row = rowOfPage(page);
-    if (row === null || byId.has(row.id)) trash.push(page.id);
+    if (row === null) plan.ignored++;
+    else if (byId.has(row.id)) plan.trash.push(page.id);
     else byId.set(row.id, { pageId: page.id, row });
   }
 
-  const plan: NotionSyncPlan = { create: [], update: [], trash };
   for (const item of items) {
     const row = rowOf(item);
     const existing = byId.get(row.id);
@@ -134,4 +137,25 @@ export function planNotionSync(items: InventoryItemView[], pages: NotionPage[]):
   }
   for (const { pageId } of byId.values()) plan.trash.push(pageId);
   return plan;
+}
+
+// ---------------------------------------------------------------------------
+// Vérification de la base
+// ---------------------------------------------------------------------------
+
+// Propriétés d'une source de données Notion, telles que GET /v1/data_sources/{id} les
+// renvoie : nom → { type }.
+export type NotionSchema = Record<string, { type?: string | undefined } | undefined>;
+
+// Écarts entre une base Notion et celle qu'attend l'export, en français ; vide si elle
+// convient. L'export n'écrit jamais dans une base qui ne convient pas : on ne vide pas par
+// erreur une base Notion qui n'a rien à voir.
+export function schemaProblems(schema: NotionSchema): string[] {
+  return Object.entries(NOTION_SCHEMA).flatMap(([name, expected]) => {
+    const type = Object.keys(expected)[0];
+    const actual = schema[name]?.type;
+    if (actual === undefined) return [`propriété « ${name} » absente`];
+    if (actual !== type) return [`propriété « ${name} » de type ${actual} au lieu de ${type}`];
+    return [];
+  });
 }

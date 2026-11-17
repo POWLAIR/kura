@@ -1,4 +1,4 @@
-import { NOTION_PROPS, NOTION_VERSION } from "@kura/core";
+import { NOTION_PROPS, NOTION_SCHEMA, NOTION_VERSION } from "@kura/core";
 import { assertEquals } from "@std/assert";
 import { asUser, connect, type Sql } from "../_shared/db.ts";
 import { createHandler } from "./handler.ts";
@@ -12,9 +12,21 @@ type Call = { method: string; path: string; body: string };
 
 // Faux Notion : répond aux requêtes du client comme l'API (pagination, texte relu en
 // plain_text, corbeille), et note tout ce qu'il reçoit.
-function fakeNotion(
-  options: { pageSize?: number; failWith?: number; rateLimitOnce?: boolean } = {},
-) {
+type FakeOptions = {
+  pageSize?: number;
+  failWith?: number;
+  rateLimitOnce?: boolean;
+  // Propriétés renvoyées pour la source de données ; par défaut, celles de l'export.
+  schema?: Record<string, { type: string }>;
+  // Latence de chaque requête, pour faire se chevaucher deux exports.
+  delayMs?: number;
+};
+
+const EXPORT_SCHEMA = Object.fromEntries(
+  Object.entries(NOTION_SCHEMA).map(([name, value]) => [name, { type: Object.keys(value)[0] }]),
+);
+
+function fakeNotion(options: FakeOptions = {}) {
   const pages = new Map<string, Page>();
   const calls: Call[] = [];
   let next = 0;
@@ -46,7 +58,11 @@ function fakeNotion(
       limited = true;
       return new Response("{}", { status: 429, headers: { "retry-after": "1" } });
     }
+    if (options.delayMs) await new Promise((resolve) => setTimeout(resolve, options.delayMs));
     const json = body ? JSON.parse(body) : {};
+    if (path === `/data_sources/${DATA_SOURCE}` && (init?.method ?? "GET") === "GET") {
+      return Response.json({ id: DATA_SOURCE, properties: options.schema ?? EXPORT_SCHEMA });
+    }
     if (path === `/data_sources/${DATA_SOURCE}/query`) {
       const all = [...pages.values()];
       const start = Number(json.start_cursor ?? 0);
@@ -81,7 +97,7 @@ function fakeNotion(
             ?.plain_text,
       )
       .sort();
-  return { fetchImpl, pages, calls, names };
+  return { fetchImpl, pages, calls, names, options };
 }
 
 async function capturingLogs<T>(
@@ -194,9 +210,10 @@ Deno.test({
         // Données de santé : elles ne doivent jamais partir vers Notion.
         await tx`select public.log_meal(${`Repas secret ${tag}`}, ${tx.json([{ name: "riz", food_ref_id: null, quantity: 100, unit: "g" }])}, ${`repas-${tag}`})`;
         await tx`insert into public.body_measure (measured_at, weight_kg) values (now(), 71.3)`;
-        await tx`insert into public.notion_export (data_source_id, changed_at)
-                 values (${DATA_SOURCE}, now() - interval '1 minute')`;
       });
+      // Comme notion:setup (clé de service) : l'utilisateur ne relie pas lui-même une base.
+      await sql`insert into public.notion_export (user_id, data_source_id, changed_at)
+                values (${user}, ${DATA_SOURCE}, now() - interval '1 minute')`;
 
       await t.step("premier export : une page par article", async () => {
         const { exported, failed, logs } = await run();
@@ -204,7 +221,14 @@ Deno.test({
         assertEquals(notion.names(), [`Riz ${tag}`, `Sel ${tag}`]);
         assertEquals((await state())?.pending, 0);
         assertEquals(logs, [
-          { event: "notion_export_done", user_id: user, created: 2, updated: 0, trashed: 0 },
+          {
+            event: "notion_export_done",
+            user_id: user,
+            created: 2,
+            updated: 0,
+            trashed: 0,
+            ignored: 0,
+          },
         ]);
       });
 
@@ -252,6 +276,51 @@ Deno.test({
         assertEquals(notion.names(), [`Sel ${tag}`, `Thé ${tag}`]);
       });
 
+      await t.step("page sans « Kura id » : jamais touchée", async () => {
+        notion.pages.set("page-main", {
+          id: "page-main",
+          properties: {
+            [NOTION_PROPS.name]: { title: [{ plain_text: "Note ajoutée à la main" }] },
+          },
+        });
+        await asUser(
+          sql,
+          user,
+          (tx) => tx`select public.add_item(${`Cumin ${tag}`}, 'epices', 'placard')`,
+        );
+        const { logs } = await run();
+        assertEquals([logs[0]?.trashed, logs[0]?.ignored], [0, 1]);
+        assertEquals(notion.pages.has("page-main"), true);
+        notion.pages.delete("page-main");
+      });
+
+      await t.step("deux appels simultanés : un seul export, aucune page en double", async () => {
+        notion.options.delayMs = 30;
+        await asUser(sql, user, async (tx) => {
+          for (const name of ["Ail", "Oignon", "Laurier", "Thym"]) {
+            await tx`select public.add_item(${`${name} ${tag}`}, 'epices', 'placard')`;
+          }
+        });
+        const { logs } = await capturingLogs(async () => {
+          const [first, second] = await Promise.all([post(handler, SECRET), post(handler, SECRET)]);
+          const results = [await first.json(), await second.json()];
+          assertEquals(
+            results.map((r) => r.exported).sort(),
+            [0, 1],
+            "un seul des deux appels exporte",
+          );
+        });
+        notion.options.delayMs = 0;
+        assertEquals(logs.length, 1);
+        const names = notion.names();
+        assertEquals(names.length, new Set(names).size, "aucune page en double");
+        assertEquals(names.length, 7);
+        assertEquals(await state(), { pending: 0, last_error: null });
+        const [lease] =
+          await sql`select export_started_at from public.notion_export where user_id = ${user}`;
+        assertEquals(lease?.export_started_at, null, "réservation libérée");
+      });
+
       await t.step("aucune donnée de santé envoyée", () => {
         const sent = notion.calls.map((call) => call.body).join("\n");
         assertEquals(sent.includes(`Repas secret ${tag}`), false);
@@ -288,6 +357,32 @@ Deno.test({
           assertEquals(await state(), { pending: 0, last_error: null });
         },
       );
+
+      await t.step("base sans les propriétés de l'export : rien n'y est écrit", async () => {
+        const other = fakeNotion({
+          schema: { Name: { type: "title" }, Tags: { type: "multi_select" } },
+        });
+        const wrongBase = createHandler({
+          sql,
+          asUser: (userId, fn) => asUser(sql, userId, fn),
+          notion: createNotionClient({ token: "t", fetchImpl: other.fetchImpl }),
+          cronSecret: SECRET,
+          quietSeconds: 0,
+        });
+        await asUser(
+          sql,
+          user,
+          (tx) => tx`select public.add_item(${`Muscade ${tag}`}, 'epices', 'placard')`,
+        );
+        const { result } = await capturingLogs(async () => (await post(wrongBase, SECRET)).json());
+        assertEquals([result.exported, result.failed], [0, 1]);
+        assertEquals(await state(), { pending: 1, last_error: "notion_schema" });
+        assertEquals(
+          other.calls.map((call) => `${call.method} ${call.path}`),
+          [`GET /data_sources/${DATA_SOURCE}`],
+          "seule la structure de la base est lue",
+        );
+      });
     } finally {
       await sql`delete from auth.users where id = ${user}`;
       await sql.end();

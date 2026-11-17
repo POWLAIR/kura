@@ -4,11 +4,12 @@
 //   pnpm notion:setup --user <email> --page <lien d'une page Notion>
 //     crée la base « Kura · Inventaire » sous cette page, puis la relie au compte
 //   pnpm notion:setup --user <email> --data-source <id>
-//     relie une source de données Notion existante (aux propriétés attendues)
+//     relie une source de données Notion existante, après avoir vérifié qu'elle a les
+//     propriétés de l'export (sinon, refus)
 //
 // L'inventaire entier part au prochain passage de la tâche planifiée (une minute au plus).
 import { parseArgs } from "node:util";
-import { NOTION_VERSION } from "@kura/core";
+import { NOTION_VERSION, type NotionSchema, schemaProblems } from "@kura/core";
 import { notionPageId } from "./notion";
 import { createDatabaseBody, dataSourceIdOf } from "./notion-export";
 import { createAdminClient, findUserId, loadEnv, requireEnv } from "./supabase";
@@ -16,14 +17,38 @@ import { createAdminClient, findUserId, loadEnv, requireEnv } from "./supabase";
 const USAGE =
   "Usage : pnpm notion:setup --user <email> (--page <lien de page> | --data-source <id>)";
 
+function notionHeaders(token: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+    "Notion-Version": NOTION_VERSION,
+    "Content-Type": "application/json",
+  };
+}
+
+// Une base existante n'est reliée que si elle a les propriétés de l'export : on ne relie
+// pas par erreur une base Notion qui n'a rien à voir.
+async function checkDataSource(dataSourceId: string, token: string): Promise<void> {
+  const response = await fetch(`https://api.notion.com/v1/data_sources/${dataSourceId}`, {
+    headers: notionHeaders(token),
+  });
+  if (response.status === 401) throw new Error("NOTION_TOKEN refusé par Notion");
+  if (response.status === 403 || response.status === 404) {
+    throw new Error("Base introuvable : la partager avec l'intégration Notion (⋯ → Connexions)");
+  }
+  if (!response.ok) throw new Error(`API Notion : HTTP ${response.status}`);
+  const { properties } = (await response.json()) as { properties?: NotionSchema };
+  const problems = schemaProblems(properties ?? {});
+  if (problems.length > 0) {
+    throw new Error(
+      `Cette base n'est pas celle de l'export Kura (${problems.join(", ")}). Crée-la plutôt avec --page.`,
+    );
+  }
+}
+
 async function createDatabase(pageId: string, token: string): Promise<string> {
   const response = await fetch("https://api.notion.com/v1/databases", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Notion-Version": NOTION_VERSION,
-      "Content-Type": "application/json",
-    },
+    headers: notionHeaders(token),
     body: JSON.stringify(createDatabaseBody(pageId)),
   });
   if (response.status === 401) throw new Error("NOTION_TOKEN refusé par Notion");
@@ -59,6 +84,7 @@ async function main(): Promise<void> {
   if (!/^[0-9a-f]{32}$/.test(dataSourceId)) {
     throw new Error("Id de source de données Notion attendu : 32 caractères hexadécimaux");
   }
+  if (values["data-source"]) await checkDataSource(dataSourceId, requireEnv("NOTION_TOKEN"));
 
   // Relier (ou relier à nouveau) : tout l'inventaire est à exporter.
   const { data: current, error: readError } = await supabase
