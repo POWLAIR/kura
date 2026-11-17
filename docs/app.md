@@ -1,6 +1,6 @@
 # App Expo
 
-L'app de Kura (`apps/mobile`) : Expo SDK 58 avec Expo Router, pour Android d'abord, puis le web en PWA (issue #32). Elle parle à la même base Supabase que le serveur MCP, avec la session de l'utilisateur : la RLS s'applique partout.
+L'app de Kura (`apps/mobile`) : Expo SDK 58 avec Expo Router, pour Android, et sur le web en PWA installable (https://powlair.github.io/kura/). Elle parle à la même base Supabase que le serveur MCP, avec la session de l'utilisateur : la RLS s'applique partout.
 
 ## Lancer l'app
 
@@ -39,6 +39,9 @@ L'app n'a pas d'écran d'inscription : en usage solo, les inscriptions sont ferm
 ```
 apps/mobile/
   app.json                Configuration Expo (nom, icônes, schéma d'URL « kura »)
+  app.config.ts           Ajoute le sous-chemin du build web (KURA_WEB_BASE_URL)
+  public/icons/           Icônes de la PWA
+  scripts/                finish-web-export.mts : manifeste, balises PWA et 404.html après le build web
   src/app/                Routes Expo Router
     _layout.tsx           Garde de session : connexion sans session, onglets avec
     sign-in.tsx           Connexion par email et mot de passe
@@ -53,6 +56,8 @@ apps/mobile/
   src/journal/            Lectures du journal et logique de ses formulaires (testée avec Vitest)
   src/components/ui.tsx   Boutons, champs, choix en pastilles, messages
   src/lib/env.ts          Lecture et contrôle des variables publiques
+  src/lib/layout.ts       Seuil du grand écran (useWideLayout)
+  src/lib/pwa.ts          Manifeste et balises de la PWA (testés avec Vitest)
   src/theme.ts            Couleurs (clair et sombre) et espacements
 ```
 
@@ -60,7 +65,7 @@ apps/mobile/
 - **Opérations métier** (courses, repas, séances…) : par la fonction `api`, qui exécute le même code que les tools MCP (voir `docs/api.md`). Les lectures simples se font en direct avec supabase-js.
 - **`packages/core`** : importé tel quel (`@kura/core`), comme dans le serveur MCP. Metro résout ses imports en `.ts` sans configuration.
 - **Couleurs** : ni rouge ni vert pour porter un sens, comme le demande la conception.
-- **Web** : `web.output` vaut `single` (une seule page, sans rendu côté serveur), ce qui suffit pour la PWA.
+- **Web** : `web.output` vaut `single` (une seule page, sans rendu côté serveur), ce qui suffit pour la PWA (voir « Version web (PWA) »).
 
 ## Accueil
 
@@ -119,6 +124,24 @@ Accueil → « Réglages » (`src/app/reglages.tsx`).
 - **Supprimer mon compte** : après avoir tapé « SUPPRIMER », la fonction `delete-account` efface le compte et toutes ses données ; l'app revient à l'écran de connexion. Voir `docs/api.md`.
 
 `pnpm mcp:key` reste utilisable depuis un terminal (voir `docs/mcp.md`).
+
+## Version web (PWA)
+
+L'app web est publiée sur GitHub Pages, à l'adresse https://powlair.github.io/kura/, et s'installe depuis le navigateur (Chrome ou Edge : icône d'installation dans la barre d'adresse).
+
+- **Grand écran** : à partir de 900 px de large (`src/lib/layout.ts`), les onglets forment une colonne à gauche et les écrans passent en colonnes. Le gabarit `Screen` accepte une seconde colonne (`aside`) : « À surveiller » sur l'Accueil, les totaux dans le Journal. Dans Cuisine, chaque emplacement a sa colonne. En dessous de 900 px, rien ne change : onglets en bas, une seule colonne.
+- **Build** : `pnpm --filter @kura/mobile export:web` lance `expo export`, puis `scripts/finish-web-export.mts`, qui écrit `manifest.webmanifest`, ajoute au `<head>` le manifeste, l'icône iOS et la couleur de la barre du navigateur, et copie `index.html` en `404.html`. GitHub Pages ne connaît pas les routes de l'app : une adresse comme `/kura/journal` reçoit cette page, et Expo Router ouvre le bon écran.
+- **Sous-chemin** : GitHub Pages sert l'app sous `/kura`. `KURA_WEB_BASE_URL=/kura` le donne au build (`app.config.ts` le passe à `experiments.baseUrl`). Sans cette variable, l'app est servie à la racine, comme avec `pnpm app`.
+- **Pas de service worker** : l'app a besoin du réseau pour joindre Supabase, et un cache hors ligne servirait d'anciennes versions. Chrome et Edge l'installent sans service worker.
+- **Données** : GitHub Pages ne sert que des fichiers statiques. Le navigateur parle directement à Supabase ; la session reste dans `localStorage` (voir plus haut).
+
+### Déploiement
+
+Le workflow `.github/workflows/pages.yml` publie l'app à chaque push sur `main` qui touche l'app ou `packages/core`, et peut aussi se lancer à la main (**Actions → PWA → Run workflow**). Une seule mise en place :
+
+1. **Settings → Pages → Source : GitHub Actions**.
+2. **Settings → Secrets and variables → Actions → Variables** : `EXPO_PUBLIC_SUPABASE_URL` (`https://<ref>.supabase.co`) et `EXPO_PUBLIC_SUPABASE_KEY` (clé **publique** `sb_publishable_…`). Ce sont des variables, pas des secrets : elles finissent dans l'app publiée, lisible par tous. Le build s'arrête si l'une manque.
+3. Autoriser l'origine de la PWA dans les Edge Functions : `pnpm exec supabase secrets set KURA_APP_ORIGINS=https://powlair.github.io` (voir `docs/api.md`).
 
 ## Vérifications
 
