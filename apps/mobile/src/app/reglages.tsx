@@ -1,6 +1,6 @@
 import type { ApiKeyView, CreatedApiKey } from "@kura/core";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Field, Notice, SectionTitle, Tag } from "@/components/ui";
 import { callApi } from "@/lib/api";
@@ -30,6 +30,9 @@ export default function SettingsScreen() {
   const [created, setCreated] = useState<CreatedApiKey | null>(null);
   const [pending, setPending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // Une création à la fois : deux appuis sur Entrée dans le même instant créeraient deux
+  // clés, dont une jamais affichée. L'état pending n'est pas encore à jour à ce moment-là.
+  const creating = useRef(false);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -47,10 +50,12 @@ export default function SettingsScreen() {
   );
 
   async function create() {
+    if (creating.current) return;
     if (label.trim() === "") {
       setProblem("Donne un nom à la clé, par exemple « Claude mobile ».");
       return;
     }
+    creating.current = true;
     setPending(true);
     setProblem(null);
     try {
@@ -60,6 +65,7 @@ export default function SettingsScreen() {
     } catch (error) {
       setProblem(errorMessage(error));
     } finally {
+      creating.current = false;
       setPending(false);
     }
   }
