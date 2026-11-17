@@ -35,7 +35,8 @@
           "cameraPermission": "Kura utilise l'appareil photo pour scanner les codes-barres de tes courses.",
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

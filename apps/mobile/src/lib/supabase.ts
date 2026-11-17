@@ -1,7 +1,7 @@
 import type { Database } from "@kura/core";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 import { AppState, Platform } from "react-native";
+import { sessionStorage } from "@/auth/session-storage";
 import { readEnv } from "./env";
 
 // Expo remplace process.env.EXPO_PUBLIC_* à la compilation : les noms doivent être écrits
@@ -12,10 +12,10 @@ const env = readEnv({
 });
 
 // Client Supabase de l'app : clé publique et session de l'utilisateur, donc RLS partout.
-// La session est gardée sur l'appareil (AsyncStorage, localStorage sur le web).
+// La session est gardée sur l'appareil, chiffrée sur mobile (voir auth/session-storage.ts).
 export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: sessionStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
