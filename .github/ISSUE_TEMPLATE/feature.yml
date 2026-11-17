@@ -6,7 +6,12 @@ body:
     id: phase
     attributes:
       label: Phase
-      options: ["Phase 1 — Fondations", "Phase 2 — App de base", "Phase 3 — Recettes", "Phase 4 — Santé", "Phase 5 — Compagnon"]
+      options:
+        - "Phase 1 — Fondations"
+        - "Phase 2 — App de base"
+        - "Phase 3 — Recettes"
+        - "Phase 4 — Santé"
+        - "Phase 5 — Compagnon"
     validations: { required: true }
   - type: textarea
     id: goal

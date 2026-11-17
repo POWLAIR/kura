@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.7/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -18,8 +18,17 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "correctness": {
+        "noReactNativeRawText": {
+          "level": "error",
+          "options": { "skip": ["Notice", "SectionTitle", "Tag"] }
+        }
+      }
     }
+  },
+  "markdown": {
+    "formatter": { "enabled": false }
   },
   "javascript": {
     "formatter": {
