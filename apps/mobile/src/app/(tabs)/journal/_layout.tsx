@@ -16,6 +16,7 @@ export default function JournalLayout() {
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="repas" options={{ title: "Repas" }} />
+      <Stack.Screen name="fiche-repas" options={{ title: "Repas" }} />
       <Stack.Screen name="seance" options={{ title: "Séance" }} />
       <Stack.Screen name="pesee" options={{ title: "Pesée" }} />
     </Stack>
