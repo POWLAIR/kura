@@ -59,8 +59,15 @@ function lineView(line: InventoryLine) {
   return { item_id: line.id, name: line.name, location: line.location, amount };
 }
 
-function ambiguousView(input: PurchaseItem, plan: Extract<PurchasePlan, { action: "ambiguous" }>) {
+function ambiguousView(
+  index: number,
+  input: PurchaseItem,
+  plan: Extract<PurchasePlan, { action: "ambiguous" }>,
+) {
   return {
+    // Position de l'article dans la liste envoyée : pour relancer le bon, même si deux
+    // articles portent le même nom.
+    index,
     name: input.name,
     reason: plan.reason,
     hint: AMBIGUITY_HINTS[plan.reason],
@@ -92,10 +99,10 @@ async function addItems(tx: Tx, items: PurchaseItem[]): Promise<AddItemsResult> 
   const created: number[] = [];
   const restocked: number[] = [];
   const ambiguous: ReturnType<typeof ambiguousView>[] = [];
-  for (const input of items) {
+  for (const [index, input] of items.entries()) {
     const plan = planPurchase(input, ctx);
     if (plan.action === "ambiguous") {
-      ambiguous.push(ambiguousView(input, plan));
+      ambiguous.push(ambiguousView(index, input, plan));
     } else if (plan.action === "restock") {
       await tx`select public.restock_item(
         ${plan.item.id}::bigint, ${plan.amount?.quantity ?? null}::numeric,

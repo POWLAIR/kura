@@ -28,6 +28,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Kura utilise l'appareil photo pour scanner les codes-barres de tes courses.",
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "experiments": {

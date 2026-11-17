@@ -55,6 +55,8 @@ export type InventoryItemView = {
 
 // Article ambigu renvoyé par add_items : de quoi trancher, puis relancer.
 export type PurchaseAmbiguity = {
+  // Position de l'article dans la liste envoyée à add_items.
+  index: number;
   name: string;
   reason: AmbiguityReason;
   hint: string;

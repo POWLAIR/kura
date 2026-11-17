@@ -21,7 +21,7 @@ import {
 import { CATEGORY_OPTIONS, LOCATION_OPTIONS, UNIT_OPTIONS } from "@/inventory/options";
 import { callApi } from "@/lib/api";
 import { errorMessage } from "@/lib/api-error";
-import { newIdempotencyKey } from "@/lib/idempotency";
+import { createKeyring } from "@/lib/idempotency";
 import { today } from "@/lib/today";
 import { spacing, usePalette } from "@/theme";
 
@@ -39,7 +39,7 @@ export default function AddItemScreen() {
   const palette = usePalette();
   const router = useRouter();
   const [form, setForm] = useState<PurchaseForm>(EMPTY_PURCHASE);
-  const [key, setKey] = useState(() => newIdempotencyKey("courses"));
+  const [keyring] = useState(() => createKeyring("courses"));
   const [pending, setPending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [ambiguity, setAmbiguity] = useState<PurchaseAmbiguity | null>(null);
@@ -59,8 +59,9 @@ export default function AddItemScreen() {
     try {
       const result = await callApi<AddItemsResult>("add_items", {
         items: [purchase.value],
-        idempotency_key: key,
+        idempotency_key: keyring.keyFor(purchase.value),
       });
+      keyring.reset();
       const [created] = result.created;
       const [restocked] = result.restocked;
       setAmbiguity(result.ambiguous[0] ?? null);
@@ -75,7 +76,6 @@ export default function AddItemScreen() {
 
   function startOver() {
     setForm(EMPTY_PURCHASE);
-    setKey(newIdempotencyKey("courses"));
     setAmbiguity(null);
     setProblem(null);
     setDone(null);

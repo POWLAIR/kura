@@ -67,6 +67,21 @@ apps/mobile/
 - **Retirer un article** : opération `remove_item`, après confirmation. L'article quitte l'inventaire avec son historique de mouvements.
 - **Dates** : saisies à la française (`24/12`, `24/12/2026`), converties par `parseDateInput`.
 
+### Ranger les courses (scan)
+
+Cuisine → « Scanner des courses » (`cuisine/scanner.tsx`, logique dans `src/inventory/scan.ts`).
+
+1. La caméra (`expo-camera`) lit les codes EAN et UPC en continu. Un code relu dans les 2,5 secondes est le même passage devant l'objectif ; relu plus tard, c'est un emballage de plus (« × 2 »).
+2. Chaque code passe par la fonction `off-product` (voir `docs/open-food-facts.md`). Le produit rejoint une liste temporaire, avec ce qui va se passer :
+   - un article en stock est lié au même aliment : il sera réapprovisionné, à son emplacement ;
+   - sinon c'est un nouvel article : sa catégorie est à choisir, son emplacement est proposé d'après elle et reste modifiable.
+   La contenance de l'emballage est proposée comme quantité quand Open Food Facts la donne.
+3. Un produit sans code-barres (fruits, légumes) s'ajoute par son nom, tapé ou dicté au clavier ; il est rapproché de Ciqual à l'envoi. Un code qui ne se scanne pas peut être tapé.
+4. « Tout ranger » envoie toute la liste à `add_items` en un appel : une transaction, un `stock_movement` « achat » par ligne, une clé d'idempotence par envoi. Les lignes qu'`add_items` juge ambiguës restent à l'écran avec de quoi trancher, puis repartent avec une nouvelle clé.
+5. Le résumé dit ce qui a été ajouté, réapprovisionné, et ce qui sort de la liste « À racheter ».
+
+Rien n'est enregistré avant « Tout ranger ». Le scan fonctionne dans Expo Go ; sur le web, la caméra dépend du navigateur, et la saisie du code reste possible.
+
 Les saisies sont validées par les schémas Zod de `packages/core` (`PurchaseItem`, `ItemChanges`) avant l'envoi, puis à nouveau par la fonction.
 
 ## Vérifications

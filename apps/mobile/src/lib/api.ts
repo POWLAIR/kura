@@ -24,3 +24,9 @@ async function invoke<T>(path: string, input: unknown): Promise<T> {
 export function callApi<T>(operation: string, input?: unknown): Promise<T> {
   return invoke<T>(`api/${operation}`, input);
 }
+
+// Produit Open Food Facts par code-barres, mis en cache dans food_ref (voir
+// docs/open-food-facts.md).
+export function callOffProduct<T>(ean: string): Promise<T> {
+  return invoke<T>("off-product", { ean });
+}
