@@ -5,6 +5,18 @@ updates:
     schedule: { interval: monthly }
     groups:
       all: { patterns: ["*"] }
+    ignore:
+      # Le projet tourne en Node 22 (.nvmrc) : les types suivent cette version.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # Modules natifs : leurs versions sont fixées par le SDK Expo (celles qu'embarque
+      # Expo Go). Ils changent avec le SDK, via `expo install --check`, pas un par un.
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "@types/react"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native-async-storage/async-storage"
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
