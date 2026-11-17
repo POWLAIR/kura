@@ -1,3 +1,4 @@
+export * from "./account.ts";
 export * from "./api-key.ts";
 export type { Database, Json, Tables, TablesInsert, TablesUpdate } from "./database.types.ts";
 export * from "./food-match.ts";

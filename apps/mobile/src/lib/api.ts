@@ -30,3 +30,8 @@ export function callApi<T>(operation: string, input?: unknown): Promise<T> {
 export function callOffProduct<T>(ean: string): Promise<T> {
   return invoke<T>("off-product", { ean });
 }
+
+// Suppression totale du compte, confirmée par le mot attendu (voir docs/api.md).
+export function callDeleteAccount(confirm: string): Promise<{ deleted: true }> {
+  return invoke("delete-account", { confirm });
+}
