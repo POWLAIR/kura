@@ -114,7 +114,7 @@ Accueil → « Réglages » (`src/app/reglages.tsx`).
 - **Clés du connecteur Claude** : la liste (nom, 12 premiers caractères, création, dernière utilisation, révoquée ou non) est lue directement dans `api_key`, sous RLS, sans jamais sélectionner le hash.
 - **Créer une clé** : opération `create_api_key`. La clé est générée et hachée par la fonction `api` ; elle revient en clair dans la réponse et s'affiche une seule fois. Seul son hash SHA-256 est en base.
 - **Révoquer** : opération `revoke_api_key`, après confirmation. Le serveur MCP refuse la clé dès la requête suivante ; elle ne peut pas être réactivée.
-- **Exporter mes données** : opération `export_data`, puis remise du fichier `kura-export-<date>.json` : un téléchargement sur le web, la feuille de partage du système sur Android (`src/lib/save-file.ts`).
+- **Exporter mes données** : opération `export_data`, puis remise du fichier `kura-export-<date>.json` : un téléchargement sur le web, la feuille de partage du système sur Android (`src/lib/save-file.ts`). Sur Android, le fichier contient des données de santé : il est effacé du cache de l'app après le partage, et tout export oublié l'est au prochain export et à la déconnexion.
 - **Se déconnecter**.
 - **Supprimer mon compte** : après avoir tapé « SUPPRIMER », la fonction `delete-account` efface le compte et toutes ses données ; l'app revient à l'écran de connexion. Voir `docs/api.md`.
 
