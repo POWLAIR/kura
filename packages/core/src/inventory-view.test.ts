@@ -84,6 +84,15 @@ describe("parseDateInput", () => {
     expect(parseDateInput("29/02/2027", TODAY)).toBeNull();
   });
 
+  it("pour le journal, sans année c'est la dernière fois que cette date est arrivée", () => {
+    const past = { past: true };
+    expect(parseDateInput("12/11", TODAY, past)).toBe(TODAY);
+    expect(parseDateInput("5/10", TODAY, past)).toBe("2026-10-05");
+    expect(parseDateInput("24/12", TODAY, past)).toBe("2025-12-24");
+    expect(parseDateInput("29/02", TODAY, past)).toBe("2024-02-29");
+    expect(parseDateInput("24/12/2026", TODAY, past)).toBe("2026-12-24"); // année donnée : telle quelle
+  });
+
   it("refuse ce qui n'est pas une date", () => {
     for (const input of ["", "demain", "31/02/2027", "12/13", "2026-13-01", "1/2/3/4"]) {
       expect(parseDateInput(input, TODAY), input).toBeNull();

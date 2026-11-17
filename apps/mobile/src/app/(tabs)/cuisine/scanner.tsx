@@ -1,8 +1,8 @@
 import { type AddItemsResult, Ean, formatAmount, LEVEL_LABELS, LOCATION_LABELS } from "@kura/core";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { BarcodeCamera } from "@/components/barcode-camera";
 import { Button, Choice, Field, Notice, SectionTitle } from "@/components/ui";
 import { ambiguityMessage, hasNoMatch, type PurchaseChoice } from "@/inventory/item-form";
 import { CATEGORY_OPTIONS, LOCATION_OPTIONS, UNIT_OPTIONS } from "@/inventory/options";
@@ -27,8 +27,6 @@ import { createKeyring } from "@/lib/idempotency";
 import { spacing, usePalette } from "@/theme";
 
 type OffAnswer = { found: true; food: ScannedFood } | { found: false; ean: string };
-
-const BARCODE_TYPES = ["ean13", "ean8", "upc_a", "upc_e"] as const;
 
 function existingAmount(amount: string): string {
   return amount in LEVEL_LABELS ? LEVEL_LABELS[amount as keyof typeof LEVEL_LABELS] : amount;
@@ -173,7 +171,6 @@ export default function ScannerScreen() {
   const palette = usePalette();
   const router = useRouter();
   const inventory = useInventory();
-  const [permission, requestPermission] = useCameraPermissions();
   const [lines, setLines] = useState<ScanLine[]>([]);
   const [looking, setLooking] = useState(0); // produits en cours de recherche
   const [message, setMessage] = useState<string | null>(null);
@@ -309,26 +306,7 @@ export default function ScannerScreen() {
           <Button label="Retour à l'inventaire" onPress={() => router.back()} />
         ) : (
           <>
-            {permission?.granted ? (
-              <CameraView
-                barcodeScannerSettings={{ barcodeTypes: [...BARCODE_TYPES] }}
-                facing="back"
-                onBarcodeScanned={pending ? undefined : ({ data }) => addCode(data, false)}
-                style={styles.camera}
-              />
-            ) : (
-              <>
-                <Text style={{ color: palette.textSecondary, lineHeight: 22 }}>
-                  L'appareil photo lit les codes-barres en continu : passe les produits devant
-                  l'objectif, ils s'ajoutent à la liste.
-                </Text>
-                <Button
-                  label="Autoriser l'appareil photo"
-                  onPress={requestPermission}
-                  variant="secondary"
-                />
-              </>
-            )}
+            <BarcodeCamera onCode={(data) => addCode(data, false)} paused={pending} />
 
             <View style={styles.inline}>
               <View style={styles.grow}>
@@ -406,7 +384,6 @@ export default function ScannerScreen() {
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, alignItems: "center" },
   column: { width: "100%", maxWidth: 720, gap: spacing.md },
-  camera: { height: 220, borderRadius: 12, overflow: "hidden" },
   inline: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm },
   grow: { flex: 1 },
   card: { borderWidth: 1, borderRadius: 12, padding: spacing.md, gap: spacing.sm },

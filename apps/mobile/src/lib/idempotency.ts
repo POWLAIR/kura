@@ -23,3 +23,8 @@ export function createKeyring(prefix: string): Keyring {
     },
   };
 }
+
+// L'entrée d'une opération log_*, avec la clé qui correspond à son contenu.
+export function withKey<T extends { idempotency_key: string }>(keyring: Keyring, input: T): T {
+  return { ...input, idempotency_key: keyring.keyFor({ ...input, idempotency_key: null }) };
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { apiErrorFrom } from "../lib/api-error";
-import { createKeyring, newIdempotencyKey } from "../lib/idempotency";
+import { createKeyring, newIdempotencyKey, withKey } from "../lib/idempotency";
 import {
   ambiguityMessage,
   changesOf,
@@ -261,6 +261,16 @@ describe("createKeyring", () => {
     expect(edited).not.toBe(first);
     // Revenir à l'ancien contenu ne ressort pas l'ancienne clé : elle a pu servir.
     expect(keyring.keyFor({ items: [{ name: "Riz", quantity: 1 }] })).not.toBe(first);
+  });
+
+  it("donne à une entrée la clé de son contenu", () => {
+    const keyring = createKeyring("pesee");
+    const first = withKey(keyring, { weight_kg: 72.4, idempotency_key: "cle-a-venir" });
+    expect(first.idempotency_key).toMatch(/^pesee-/);
+    expect(withKey(keyring, { weight_kg: 72.4, idempotency_key: "autre" })).toEqual(first);
+    expect(
+      withKey(keyring, { weight_kg: 72.1, idempotency_key: "autre" }).idempotency_key,
+    ).not.toBe(first.idempotency_key);
   });
 
   it("repart d'une clé neuve après un envoi réussi", () => {
