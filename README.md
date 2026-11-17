@@ -13,6 +13,7 @@ pnpm install
 cp .env.example .env
 pnpm db:start
 pnpm check
+pnpm app         # app Expo : voir docs/app.md
 ```
 
 ## Travailler avec Claude
