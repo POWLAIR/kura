@@ -8,12 +8,12 @@ Outil personnel qui relie inventaire de cuisine, recettes, suivi alimentation/sp
 
 ```
 apps/mobile/          App Expo (Android + web), Expo Router — voir docs/app.md
-packages/core/        Schémas Zod + logique métier partagés app ↔ MCP (nutrients, food-match, purchase, tracking)
+packages/core/        Schémas Zod + logique métier partagés app ↔ MCP (nutrients, food-match, purchase, tracking, off)
 scripts/              Imports ponctuels exécutés en local (Ciqual, Notion)
 supabase/migrations/  Schéma Postgres, RLS, fonctions RPC (cook_recipe…)
-supabase/functions/   Edge Functions Deno : mcp (docs/mcp.md), api (docs/api.md), recipes, notion-export… ; _shared = opérations métier communes
+supabase/functions/   Edge Functions Deno : mcp (docs/mcp.md), api (docs/api.md), off-product (docs/open-food-facts.md), recipes, notion-export… ; _shared = opérations métier communes
 supabase/tests/       Tests pgTAP (SQL + RLS)
-docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP ; api.md : API de l'app ; app.md : app Expo ; deploiement.md)
+docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP ; api.md : API de l'app ; open-food-facts.md : produits par code-barres ; app.md : app Expo ; deploiement.md)
 ```
 
 ## Commandes

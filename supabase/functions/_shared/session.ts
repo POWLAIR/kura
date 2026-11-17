@@ -1,4 +1,5 @@
-// Authentification de l'API de l'app : le jeton de session Supabase de l'utilisateur.
+// Authentification des fonctions appelées par l'app (api, off-product) : le jeton de session
+// Supabase de l'utilisateur.
 
 // Id de l'utilisateur du jeton, ou null si le jeton est refusé. Lève une erreur si le
 // service d'authentification ne répond pas (l'appelant renvoie alors un 503).

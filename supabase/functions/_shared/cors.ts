@@ -1,4 +1,4 @@
-// CORS de l'API de l'app. L'app Android n'envoie pas d'en-tête Origin ; une page web n'est
+// CORS des fonctions appelées par l'app (api, off-product). L'app Android n'envoie pas d'en-tête Origin ; une page web n'est
 // acceptée que depuis l'app web (KURA_APP_ORIGINS) ou depuis localhost, pour le développement.
 
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;

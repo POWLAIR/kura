@@ -13,10 +13,14 @@ supabase/functions/
     inventory.ts    get_inventory, add_items, update_item, get_shopping_list
     tracking.ts     log_meal, log_workout, log_weight, get_summary, corrections, conversions
     db.ts           Connexion Postgres et asUser (RLS)
+    http.ts         Entrée commune des fonctions de l'app : origine, méthode, session, corps JSON
+    session.ts      Vérification du jeton de session auprès de Supabase Auth
+    cors.ts         Origines autorisées
     errors.ts       Erreurs de saisie renvoyées à l'appelant
     log.ts          Logs : ids et codes d'erreur seulement
   mcp/              Ce que lit Claude : titres, descriptions, consignes ; auth par clé API
-  api/              Ce qu'appelle l'app : HTTP, auth par session, CORS
+  api/              Ce qu'appelle l'app : les opérations, par leur nom
+  off-product/      Produit par code-barres (docs/open-food-facts.md)
 ```
 
 Une opération ajoutée à `OPERATIONS` est disponible dans l'API ; elle devient un tool MCP quand on lui écrit sa description dans `mcp/tools/`.
