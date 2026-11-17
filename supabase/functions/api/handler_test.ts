@@ -394,6 +394,7 @@ Deno.test({
             "inventory_item",
             "meal",
             "meal_item",
+            "notion_export",
             "recipe",
             "recipe_ingredient",
             "stock_movement",

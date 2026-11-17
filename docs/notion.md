@@ -1,6 +1,13 @@
+# Notion
+
+Deux usages, dans des sens opposés :
+
+- **Import** (une fois, phase 1) : la page Notion « Inventaire des ingrédients » vers `inventory_item`. Voir ci-dessous.
+- **Export** (phase 2) : l'inventaire vers une base Notion en lecture seule, tenue à jour. Voir [Export vers Notion](#export-vers-notion).
+
 # Import Notion
 
-Import unique de la page Notion « Inventaire des ingrédients » dans `inventory_item`, avec un `stock_movement` motif `achat` par article. L'export vers Notion (phase 2) est un autre sujet.
+Import unique de la page Notion « Inventaire des ingrédients » dans `inventory_item`, avec un `stock_movement` motif `achat` par article.
 
 - **Code** : lecture de la page dans [`scripts/src/notion.ts`](../scripts/src/notion.ts), rapprochement Ciqual dans [`scripts/src/food-match.ts`](../scripts/src/food-match.ts), import dans [`scripts/src/import-notion.ts`](../scripts/src/import-notion.ts).
 - **Choix Ciqual** : [`scripts/notion-choices.json`](../scripts/notion-choices.json).
@@ -67,3 +74,56 @@ Chaque article reçoit un `stock_movement` motif `achat` dont le `delta` vaut :
 
 - la quantité, pour un article chiffré (12 pour une douzaine d'œufs) ;
 - la fraction d'un contenant plein, pour un article en niveau (`STOCK_LEVEL_FRACTION` de `@kura/core` : plein 1, moitié 0,5, presque vide 0,25).
+
+# Export vers Notion
+
+Une base Notion « Kura · Inventaire », tenue à jour depuis l'inventaire, pour le consulter dans Notion sans dépendre de lui (issue #29).
+
+- **Sens unique** : Kura écrit, Notion ne fait que montrer. Une modification faite dans Notion n'est jamais relue : elle est réécrite au prochain export. Une page ajoutée à la main part à la corbeille.
+- **Inventaire seulement** : nom, emplacement, catégorie, quantité ou niveau, date de péremption, « À racheter ». Ni repas, ni séances, ni pesées, ni aliment de référence (testé).
+
+## Propriétés de la base
+
+| Propriété | Type | Contenu |
+|---|---|---|
+| Nom | titre | nom de l'article |
+| Emplacement | sélection | Placard, Frigo, Congélateur |
+| Catégorie | sélection | Épices, Féculents, Sauces, Frais, Fait maison |
+| Quantité | texte | « 1,5 kg », « 6 pièces », « Moitié » |
+| Péremption | date | vide s'il n'y en a pas |
+| À racheter | case à cocher | cochée sous le seuil de rachat |
+| Kura id | nombre | id de l'article, qui relie la page à l'inventaire : ne pas le modifier |
+
+La liste « À racheter » est une vue de cette base, filtrée sur la case « À racheter ». Elle se crée une fois dans Notion (Ajouter une vue → filtre « À racheter » est coché) : l'API ne crée pas de vues.
+
+## Fonctionnement
+
+1. Un déclencheur sur `inventory_item` compte chaque modification de l'inventaire dans `notion_export.changes`.
+2. Toutes les minutes, `pg_cron` appelle `request_notion_export()`. S'il y a des modifications non exportées, et aucune depuis 15 secondes, elle appelle la fonction `notion-export` par `pg_net`, avec un secret partagé. Les modifications rapprochées (courses rangées par scan) partent donc en un seul export.
+3. La fonction lit l'inventaire de l'utilisateur sous RLS (la même opération que `get_inventory`), lit les pages de la base, puis crée ce qui manque, réécrit ce qui diffère et met le reste à la corbeille. Une page à jour n'est pas touchée. Elle marque enfin comme exportées les modifications vues au départ : une modification faite pendant l'export part au suivant.
+4. Si Notion refuse (jeton invalide, base non partagée), le code est noté dans `notion_export.last_error` (ex. `notion_401`) et l'export reste à faire : il est retenté chaque minute. Les logs ne contiennent que l'id de l'utilisateur, des nombres de pages et des codes.
+
+Notion limite à environ trois requêtes par seconde : un 429 fait attendre le délai indiqué (`Retry-After`), trois fois au plus.
+
+## Mise en place
+
+Prérequis : une intégration Notion (notion.so/profile/integrations) et son jeton, `NOTION_TOKEN`.
+
+1. Dans Notion, crée une page qui accueillera la base, et partage-la avec l'intégration (⋯ → Connexions).
+2. Crée la base et relie-la au compte :
+
+   ```bash
+   pnpm notion:setup --user <email> --page <lien de la page>
+   ```
+
+   Pour une base qui existe déjà avec les propriétés ci-dessus : `--data-source <id>` au lieu de `--page`. Relier à nouveau le compte exporte tout l'inventaire.
+3. Configure la fonction et la tâche planifiée : voir `docs/deploiement.md` (secrets `NOTION_TOKEN` et `KURA_CRON_SECRET`, deux secrets dans le coffre de la base).
+
+Pour arrêter l'export : supprimer la ligne de l'utilisateur dans `notion_export`. La base Notion reste telle quelle.
+
+## Tests
+
+- `packages/core/src/notion-export.test.ts` : propriétés envoyées (inventaire seulement), relecture d'une page, plan d'export (créer, réécrire, corbeille, doublons, pages ajoutées à la main).
+- `supabase/tests/notion_export_test.sql` : RLS, modifications comptées pour leur seul propriétaire, attente de la fin d'une rafale, modification arrivée pendant un export.
+- `supabase/functions/notion-export/handler_test.ts`, avec un faux Notion qui répond comme l'API : refus sans le secret, pagination et 429, export complet puis mises à jour, corbeille, aucune donnée de santé envoyée, erreur de Notion notée sans contenu dans les logs.
+
