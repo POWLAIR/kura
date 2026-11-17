@@ -17,6 +17,7 @@ const USER_TABLES = [
   "body_measure",
   "food_conversion",
   "companion_event",
+  "notion_export",
 ] as const;
 
 export async function exportData(tx: Tx): Promise<DataExport> {

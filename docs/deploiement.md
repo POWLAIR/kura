@@ -20,7 +20,7 @@ Mise en ligne de Kura sur Supabase, en région UE, puis branchement de Claude su
 pnpm exec supabase login
 pnpm exec supabase link --project-ref <ref>
 pnpm exec supabase db push          # applique supabase/migrations (vérifie la liste avant de valider)
-pnpm functions:deploy               # déploie les fonctions de supabase/functions : mcp, api, off-product et delete-account (bundling côté Supabase)
+pnpm functions:deploy               # déploie les fonctions de supabase/functions : mcp, api, off-product, delete-account et notion-export (bundling côté Supabase)
 ```
 
 - **Secrets** : aucun n'est à configurer pour `mcp`, qui n'utilise que `SUPABASE_DB_URL`, fournie d'office aux Edge Functions. `api` lit en plus `SUPABASE_URL` et `SUPABASE_ANON_KEY`, fournies elles aussi ; son seul secret, `KURA_APP_ORIGINS`, ne sert qu'à l'app web (voir `docs/api.md`). `off-product` fonctionne sans secret ; `KURA_OFF_USER_AGENT` permet d'indiquer un contact à Open Food Facts (voir `docs/open-food-facts.md`). `delete-account` utilise `SUPABASE_SERVICE_ROLE_KEY`, fournie d'office elle aussi : c'est la seule fonction à s'en servir. `verify_jwt` est repris de `supabase/config.toml` : `false` pour `mcp`, `true` pour les autres.
@@ -87,6 +87,31 @@ Depuis l'app Claude mobile, avec le connecteur Kura activé :
 3. « Résumé de ma journée » : Claude appelle `get_summary`.
 
 Côté Supabase, **Edge Functions → mcp → Logs** ne doit montrer que des événements et des codes (`auth_refused`, `mcp_error`), jamais de contenu. En cas de refus, `auth_refused` indique les en-têtes d'authentification reçus (nom, longueur, préfixe `kura_`) : c'est le premier endroit à regarder si le connecteur ne se connecte pas.
+
+## 6. Export vers Notion (facultatif)
+
+La migration `notion_export` active `pg_cron` et `pg_net` et planifie la tâche `kura-notion-export` (toutes les minutes). Tant que les secrets ci-dessous manquent, elle ne fait rien.
+
+```bash
+# Secret partagé entre la tâche planifiée et la fonction : une valeur aléatoire
+openssl rand -hex 32
+pnpm exec supabase secrets set NOTION_TOKEN=<jeton de l'intégration> KURA_CRON_SECRET=<la valeur>
+```
+
+Puis, dans **SQL Editor** du dashboard, range l'adresse des fonctions et le même secret dans le coffre de la base :
+
+```sql
+select vault.create_secret('https://<ref>.supabase.co', 'kura_functions_url');
+select vault.create_secret('<la valeur>', 'kura_cron_secret');
+```
+
+Enfin, relie l'inventaire à une base Notion (voir `docs/notion.md`) :
+
+```bash
+KURA_ENV_FILE=.env.production pnpm notion:setup --user <email> --page <lien de la page>
+```
+
+Vérification : `select changes, synced_changes, synced_at, last_error from notion_export;` après une minute. `last_error` donne le code d'un refus de Notion.
 
 ## Exploitation
 

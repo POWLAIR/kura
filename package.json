@@ -21,7 +21,8 @@
     "db:types": "supabase gen types typescript --local > packages/core/src/database.types.ts",
     "import:ciqual": "pnpm --filter @kura/scripts import:ciqual",
     "import:notion": "pnpm --filter @kura/scripts import:notion",
-    "mcp:key": "pnpm --filter @kura/scripts mcp:key"
+    "mcp:key": "pnpm --filter @kura/scripts mcp:key",
+    "notion:setup": "pnpm --filter @kura/scripts notion:setup"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

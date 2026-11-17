@@ -8,7 +8,8 @@
     "import:notion": "tsx src/import-notion.ts",
     "mcp:key": "tsx src/mcp-key.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "notion:setup": "tsx src/notion-setup.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

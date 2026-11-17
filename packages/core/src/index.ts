@@ -5,6 +5,7 @@ export * from "./food-match.ts";
 export * from "./inventory.ts";
 export * from "./inventory-view.ts";
 export * from "./journal-view.ts";
+export * from "./notion-export.ts";
 export * from "./nutrients.ts";
 export * from "./off.ts";
 export * from "./purchase.ts";

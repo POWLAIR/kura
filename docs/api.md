@@ -57,7 +57,7 @@ const { data, error } = await supabase.functions.invoke("api/add_items", {
 
 Les deux droits sur ses données prévus par la conception (« Sécurité et données de santé »).
 
-**`export_data`** (opération de `api`) renvoie toutes les données de l'utilisateur en JSON : `{ format: 1, exported_at, tables: { <table>: [lignes] } }`. Les tables sont lues telles quelles, sous RLS : `inventory_item`, `stock_movement`, `recipe`, `recipe_ingredient`, `meal`, `meal_item`, `workout`, `body_measure`, `food_conversion`, `companion_event`, puis `api_key` sans le hash des clés, et les lignes de `food_ref` que ces données citent. `idempotent_call` n'y figure pas : c'est un cache technique de réponses déjà présentes ailleurs.
+**`export_data`** (opération de `api`) renvoie toutes les données de l'utilisateur en JSON : `{ format: 1, exported_at, tables: { <table>: [lignes] } }`. Les tables sont lues telles quelles, sous RLS : `inventory_item`, `stock_movement`, `recipe`, `recipe_ingredient`, `meal`, `meal_item`, `workout`, `body_measure`, `food_conversion`, `companion_event`, `notion_export`, puis `api_key` sans le hash des clés, et les lignes de `food_ref` que ces données citent. `idempotent_call` n'y figure pas : c'est un cache technique de réponses déjà présentes ailleurs.
 
 **`delete-account`** (`supabase/functions/delete-account/`) supprime le compte : `POST /functions/v1/delete-account`, corps `{ "confirm": "SUPPRIMER" }`, avec la session de l'utilisateur.
 

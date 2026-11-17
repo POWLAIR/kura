@@ -179,6 +179,20 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"notion_export": {
+                  Row: {
+                    "changed_at": string,"changes": number,"created_at": string,"data_source_id": string,"export_started_at": string | null,"last_error": string | null,"synced_at": string | null,"synced_changes": number,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "changed_at"?: string,"changes"?: number,"created_at"?: string,"data_source_id": string,"export_started_at"?: string | null,"last_error"?: string | null,"synced_at"?: string | null,"synced_changes"?: number,"user_id"?: string
+                  }
+                  Update: {
+                    "changed_at"?: string,"changes"?: number,"created_at"?: string,"data_source_id"?: string,"export_started_at"?: string | null,"last_error"?: string | null,"synced_at"?: string | null,"synced_changes"?: number,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"recipe": {
                   Row: {
                     "created_at": string,"id": number,"is_favorite": boolean,"origin": Database["public"]['Enums']["recipe_origin"],"servings": number,"steps": NonNullable<Json>,"title": string,"total_minutes": number | null,"updated_at": string,"user_id": string
@@ -288,6 +302,11 @@ isOneToOne: false
             "add_item":
 { Args: { "p_category": Database["public"]['Enums']["inventory_category"],"p_expires_on"?: string,"p_food_ref_id"?: number,"p_location": Database["public"]['Enums']["inventory_location"],"p_name": string,"p_quantity"?: number,"p_unit"?: Database["public"]['Enums']["quantity_unit"] }; Returns: number
                            },
+"claim_notion_exports":
+{ Args: { "p_lease"?: string,"p_quiet"?: string }; Returns: {
+              "changes": number,"data_source_id": string,"user_id": string
+            }[]
+                           },
 "log_meal":
 { Args: { "p_eaten_at"?: string,"p_idempotency_key": string,"p_items": Json,"p_label": string }; Returns: {
               "meal_id": number,"replayed": boolean
@@ -296,11 +315,19 @@ isOneToOne: false
 "meal_totals":
 { Args: { "p_meal_id": number }; Returns: Json
                            },
+"notion_exports_due":
+{ Args: { "p_lease"?: string,"p_quiet"?: string }; Returns: {
+              "changes": number,"data_source_id": string,"user_id": string
+            }[]
+                           },
 "nutrition_amount":
 { Args: { "p_density_g_ml": number,"p_per_100_unit": Database["public"]['Enums']["quantity_unit"],"p_quantity": number,"p_quantity_g": number,"p_unit": Database["public"]['Enums']["quantity_unit"] }; Returns: number
                            },
 "refresh_meal":
 { Args: { "p_meal_id": number }; Returns: undefined
+                           },
+"request_notion_export":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "restock_item":
 { Args: { "p_expires_on"?: string,"p_item_id": number,"p_quantity"?: number,"p_unit"?: Database["public"]['Enums']["quantity_unit"] }; Returns: undefined

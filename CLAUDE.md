@@ -11,9 +11,9 @@ apps/mobile/          App Expo (Android + web), Expo Router — voir docs/app.md
 packages/core/        Schémas Zod + logique métier partagés app ↔ MCP (nutrients, food-match, purchase, tracking, off)
 scripts/              Imports ponctuels exécutés en local (Ciqual, Notion)
 supabase/migrations/  Schéma Postgres, RLS, fonctions RPC (cook_recipe…)
-supabase/functions/   Edge Functions Deno : mcp (docs/mcp.md), api et delete-account (docs/api.md), off-product (docs/open-food-facts.md), recipes, notion-export… ; _shared = opérations métier communes
+supabase/functions/   Edge Functions Deno : mcp (docs/mcp.md), api et delete-account (docs/api.md), off-product (docs/open-food-facts.md), notion-export (docs/notion.md), recipes… ; _shared = opérations métier communes
 supabase/tests/       Tests pgTAP (SQL + RLS)
-docs/                 Conception et décisions (ciqual.md, notion.md : imports ; mcp.md : serveur MCP ; api.md : API de l'app ; open-food-facts.md : produits par code-barres ; app.md : app Expo ; deploiement.md)
+docs/                 Conception et décisions (ciqual.md : import ; notion.md : import et export Notion ; mcp.md : serveur MCP ; api.md : API de l'app ; open-food-facts.md : produits par code-barres ; app.md : app Expo ; deploiement.md)
 ```
 
 ## Commandes
@@ -32,6 +32,7 @@ pnpm import:notion <page> --dry-run        # inventaire initial depuis Notion (v
 pnpm exec supabase test db                 # tests pgTAP
 pnpm functions:test                        # tests Deno des Edge Functions (inclus dans pnpm check)
 pnpm mcp:key --user <email>                # clé API du serveur MCP (affichée une fois)
+pnpm notion:setup --user <email> --page <lien>  # relie l'inventaire à une base Notion (docs/notion.md)
 pnpm exec supabase functions serve <nom>   # Edge Function en local
 KURA_ENV_FILE=.env.production pnpm <script>  # scripts contre la base déployée (voir docs/deploiement.md)
 ```

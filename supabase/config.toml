@@ -431,3 +431,8 @@ verify_jwt = true
 # service_role (voir docs/api.md).
 [functions.delete-account]
 verify_jwt = true
+
+# Export Notion : appelé par pg_cron avec un secret partagé (x-kura-cron), pas par un
+# utilisateur (voir docs/notion.md).
+[functions.notion-export]
+verify_jwt = false
