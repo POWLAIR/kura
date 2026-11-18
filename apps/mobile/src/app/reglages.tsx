@@ -8,6 +8,7 @@ import {
 import { useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ConnectedApps } from "@/components/connected-apps";
 import { Button, Field, Notice, SectionTitle, Tag } from "@/components/ui";
 import { callApi, callDeleteAccount } from "@/lib/api";
 import { errorMessage, NETWORK_MESSAGE } from "@/lib/api-error";
@@ -28,7 +29,8 @@ const dateTime = new Intl.DateTimeFormat("fr-FR", {
 });
 const when = (iso: string) => dateTime.format(new Date(iso));
 
-// Réglages : les clés du connecteur Claude (serveur MCP), l'export de ses données, la
+// Réglages : les clés du connecteur Claude (serveur MCP), les applications connectées par
+// OAuth, l'export de ses données, la
 // déconnexion et la suppression du compte.
 // Une clé n'est affichée qu'à sa création ; seul son hash est gardé en base.
 export default function SettingsScreen() {
@@ -225,6 +227,8 @@ export default function SettingsScreen() {
             )}
           </View>
         ))}
+
+        <ConnectedApps />
 
         <SectionTitle>Mes données</SectionTitle>
         <Text style={{ color: palette.textSecondary, lineHeight: 22 }}>

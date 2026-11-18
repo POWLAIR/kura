@@ -259,7 +259,7 @@ Le risque principal n'est pas technique : c'est d'arrêter de saisir au bout de 
 |---|---|
 | Abandon de la saisie | MCP dès la phase 1, scan en continu, saisie en une phrase |
 | Conversions d'unités imprécises (pièce, cuillère, « moitié ») | Poids moyen par aliment, indicateur « valeurs partielles » au lieu d'un chiffre inventé |
-| Auth MCP pas encore intégrée aux Edge Functions Supabase | Clé API en en-tête en attendant, Cloudflare Workers en repli |
+| Auth MCP pas encore intégrée aux Edge Functions Supabase | OAuth 2.1 de Supabase Auth en place (phase 3), clé API gardée pour Claude Code et les scripts, Cloudflare Workers en repli |
 | Connecteurs personnalisés instables côté Claude (incidents signalés en 2026) | Tester aussi le serveur avec Claude Code et l'inspecteur MCP |
 | Modules santé incompatibles avec Expo Go | Development build EAS dès la phase 4 |
 | Personnage Rive long à dessiner | Placeholder simple en phase 2, personnage final en phase 5 |

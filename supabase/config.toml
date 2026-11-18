@@ -157,7 +157,8 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+# Kura : l'app web locale (pnpm app, « w »), où se trouve l'écran de consentement OAuth.
+site_url = "http://localhost:8081"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
@@ -363,14 +364,13 @@ enabled = false
 # Obtain from https://clerk.com/setup/supabase
 # domain = "example.clerk.accounts.dev"
 
-# OAuth server configuration
+# Serveur OAuth 2.1 de Supabase Auth : le connecteur claude.ai s'y authentifie pour le
+# serveur MCP (issue #38, docs/mcp.md). L'écran de consentement est celui de l'app,
+# site_url + authorization_url_path ; Claude s'enregistre seul (enregistrement dynamique).
 [auth.oauth_server]
-# Enable OAuth server functionality
-enabled = false
-# Path for OAuth consent flow UI
+enabled = true
 authorization_url_path = "/oauth/consent"
-# Allow dynamic client registration
-allow_dynamic_registration = false
+allow_dynamic_registration = true
 
 [edge_runtime]
 enabled = true
@@ -383,8 +383,11 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+# Variables des Edge Functions en local (aucun secret ici). KURA_PUBLIC_URL : l'adresse vue
+# depuis l'ordinateur ; sans elle, le serveur MCP annoncerait aux clients OAuth l'adresse
+# interne http://kong:8000 (voir docs/mcp.md).
+[edge_runtime.secrets]
+KURA_PUBLIC_URL = "http://127.0.0.1:54321"
 
 [analytics]
 enabled = true
