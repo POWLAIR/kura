@@ -7,6 +7,8 @@ import {
   cookStockReport,
   generatedToSaveInput,
   type IngredientContext,
+  ingredientAmount,
+  ingredientAvailability,
   RecipeIngredientInput,
   recipePrompt,
   resolveRecipeIngredients,
@@ -258,5 +260,32 @@ describe("propositions depuis le stock", () => {
       demande: { max_minutes: 20 },
       stock,
     });
+  });
+});
+
+describe("fiche recette", () => {
+  const inventory = [
+    { id: 1, name: "Riz", category: "feculents", location: "placard", quantity: 150, unit: "g" },
+    { id: 2, name: "Sauce soja", category: "sauces", location: "placard", level: "moitie" },
+    { id: 3, name: "Oeufs", category: "frais", location: "frigo", quantity: 0, unit: "piece" },
+    { id: 4, name: "Lait", category: "frais", location: "frigo", quantity: 1000, unit: "ml" },
+  ] as InventoryItemView[];
+
+  it.each([
+    [{ name: "riz", quantity: 100, unit: "g", item_id: 1 }, 1, "available", "En stock : 150 g"],
+    [{ name: "riz", quantity: 100, unit: "g", item_id: 1 }, 2, "short", "Il en reste 150 g"],
+    [{ name: "sauce", quantity: 30, unit: "ml", item_id: 2 }, 1, "available", "En stock : Moitié"],
+    [{ name: "œufs", quantity: 2, unit: "piece", item_id: 3 }, 1, "missing", "Stock épuisé"],
+    [{ name: "lait", quantity: 100, unit: "g", item_id: 4 }, 1, "available", "En stock : 1 l"],
+    [{ name: "sel" }, 1, "missing", "Pas dans le stock"],
+    [{ name: "beurre", item_id: 99 }, 1, "missing", "Pas dans le stock"],
+  ] as const)("ingredientAvailability %o ×%d", (ingredient, factor, status, label) => {
+    expect(ingredientAvailability(ingredient, inventory, factor)).toEqual({ status, label });
+  });
+
+  it("ingredientAmount : au prorata, « à votre goût » sans quantité", () => {
+    expect(ingredientAmount({ name: "riz", quantity: 200, unit: "g" }, 0.5)).toBe("100 g");
+    expect(ingredientAmount({ name: "œufs", quantity: 3, unit: "piece" }, 1)).toBe("3 pièces");
+    expect(ingredientAmount({ name: "sel" })).toBe("à votre goût");
   });
 });
