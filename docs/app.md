@@ -105,12 +105,13 @@ Les saisies sont validées par les schémas Zod de `packages/core` (`PurchaseIte
 - **Jour** (`journal/index.tsx`) : la frise des repas, séances et pesées, à l'heure de Paris, lue par l'opération `get_summary` : les mêmes journées que pour Claude. Chaque repas porte ses valeurs principales (`nutritionBrief`), lues dans `meal.nutrition_totals` ; sous la frise, le total des repas du jour.
 - **Semaine** : un jour par ligne (repas, valeurs, minutes de sport), le total de la semaine, et le poids en moyenne plutôt qu'au jour le jour. Un appui sur un jour l'ouvre.
 - **Valeurs** : une valeur absente s'écrit « non renseignée », jamais zéro ; un total dont il manque une partie s'écrit « au moins … » ; un repas dont un aliment n'a pas pu être compté est « valeurs partielles ». Ni objectif, ni jugement, ni couleur.
+- **Carte nutrition** (`components/nutrition-card.tsx`), sur le jour et la fiche d'un repas, puis sur la fiche recette : les valeurs principales toujours visibles ; vitamines et minéraux dans une section dépliable, les plus courants d'abord (`micronutrientRows`, `sumMicronutrients`, lus dans `meal.nutrition_totals` : `get_summary` ne les donne pas, pour garder une réponse courte à Claude). Toucher une valeur ouvre sa fiche « À quoi ça sert » : deux ou trois phrases et leurs sources (Anses, Manger Bouger), écrites une fois dans `packages/core/src/nutrient-info.ts`, jamais générées. Un test refuse dans ces fiches tout mot qui juge ou fixe un objectif. La semaine n'affiche que les valeurs principales.
 - **Saisir** : une séance (`journal/seance.tsx`), une pesée (`journal/pesee.tsx`), un repas (`journal/repas.tsx`). Le repas se compose d'aliments cherchés par leur nom dans `food_ref`, ou d'un produit scanné ; la quantité se donne dans l'unité dite (g, ml, pièce…) et l'enregistrement passe par `log_meal`, qui calcule les valeurs côté serveur.
 - **Poids d'une pièce, densité** : quand `log_meal` signale une conversion manquante, l'écran demande la mesure à l'utilisateur (`set_food_conversion`) ; rien n'est estimé, et « Plus tard » laisse le repas en valeurs partielles.
 - **Corriger** : un appui sur une séance ou une pesée ouvre sa fiche (`update_workout`, `update_weight`, suppression). Un appui sur un repas ouvre sa fiche (`journal/fiche-repas.tsx`) : ses aliments tels que dits, leurs grammes, leur aliment de référence et ses valeurs ; il s'y supprime, puis se ressaisit, comme avec les tools MCP (`delete_entry`).
 - **Dates et heures** : tapées (`12/11`, `12h30`) et converties à l'heure de Paris (`zonedIso`) ; sans année, une date du journal est la dernière fois qu'elle est arrivée.
 
-Hors de cette version : le détail nutritionnel et les fiches « À quoi ça sert » (phase 3), la tendance de poids lissée (phase 4).
+Hors de cette version : la tendance de poids lissée (phase 4).
 
 ## Réglages
 
