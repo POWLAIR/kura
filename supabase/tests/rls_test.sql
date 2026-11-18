@@ -58,8 +58,8 @@ insert into public.meal_item (meal_id, food_ref_id, quantity_g)
 values ((select id from public.meal), (select id from public.food_ref where code = 'test-riz'), 150);
 insert into public.stock_movement (inventory_item_id, delta, reason)
 values ((select id from public.inventory_item), -150, 'cuisine');
-insert into public.recipe_ingredient (recipe_id, inventory_item_id, quantity, unit)
-values ((select id from public.recipe), (select id from public.inventory_item), 150, 'g');
+insert into public.recipe_ingredient (recipe_id, name, inventory_item_id, quantity, unit)
+values ((select id from public.recipe), 'riz', (select id from public.inventory_item), 150, 'g');
 insert into public.workout (started_at, type, duration_min) values (now(), 'vélo', 40);
 insert into public.body_measure (measured_at, weight_kg) values (now(), 70.5);
 insert into public.companion_event (type) values ('repas_cuisine');
@@ -128,8 +128,8 @@ select throws_ok(
   'B ne peut pas ajouter un aliment au repas de A'
 );
 select throws_ok(
-  $$insert into public.recipe_ingredient (recipe_id, quantity, unit)
-    values ((select recipe_id from a_ids), 1, 'g')$$,
+  $$insert into public.recipe_ingredient (recipe_id, name, quantity, unit)
+    values ((select recipe_id from a_ids), 'riz', 1, 'g')$$,
   '23503', null,
   'B ne peut pas ajouter un ingrédient à la recette de A'
 );

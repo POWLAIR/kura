@@ -12,6 +12,7 @@ supabase/functions/
     operations.ts   La liste des opérations : un schéma Zod de @kura/core et une fonction chacune
     inventory.ts    get_inventory, add_items, update_item, remove_item, get_shopping_list
     tracking.ts     log_meal, log_workout, log_weight, get_summary, corrections, conversions
+    recipes.ts      save_recipe, get_recipes, cook_recipe
     db.ts           Connexion Postgres et asUser (RLS)
     http.ts         Entrée commune des fonctions de l'app : origine, méthode, session, corps JSON
     session.ts      Vérification du jeton de session auprès de Supabase Auth
@@ -32,7 +33,7 @@ Ce qui reste en direct dans l'app, avec supabase-js : les lectures simples (vue 
 
 ## Appel
 
-`POST /functions/v1/api/<opération>`, avec en corps JSON l'entrée de l'opération ; un corps vide vaut `{}`, pour les lectures sans filtre. Les noms et les entrées sont ceux des tools MCP (voir `docs/mcp.md`) : `get_inventory`, `add_items`, `update_item`, `remove_item`, `get_shopping_list`, `log_meal`, `set_food_conversion`, `log_workout`, `log_weight`, `delete_entry`, `update_workout`, `update_weight`, `get_summary`.
+`POST /functions/v1/api/<opération>`, avec en corps JSON l'entrée de l'opération ; un corps vide vaut `{}`, pour les lectures sans filtre. Les noms et les entrées sont ceux des tools MCP (voir `docs/mcp.md`) : `get_inventory`, `add_items`, `update_item`, `remove_item`, `get_shopping_list`, `log_meal`, `set_food_conversion`, `log_workout`, `log_weight`, `delete_entry`, `update_workout`, `update_weight`, `get_summary`, `save_recipe`, `get_recipes`, `cook_recipe`.
 
 Depuis l'app :
 

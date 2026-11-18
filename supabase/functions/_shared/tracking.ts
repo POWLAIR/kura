@@ -36,7 +36,7 @@ const MEAL_HINTS: Record<MealItemAmbiguity["reason"], string> = {
     "food_ref_id inconnu : relancer cet aliment sans food_ref_id pour obtenir des candidats.",
 };
 
-const CONVERSION_HINT =
+export const CONVERSION_HINT =
   "Valeurs partielles : demander à l'utilisateur le poids d'une pièce (pesée, emballage) ou la densité de ces aliments, sans jamais les estimer, puis appeler set_food_conversion. Ce repas et les précédents seront recalculés.";
 
 type MealRow = {
@@ -48,7 +48,7 @@ type MealRow = {
   nutrition_totals: unknown;
 };
 
-async function mealView(tx: Tx, mealId: number) {
+export async function mealView(tx: Tx, mealId: number) {
   const [meal] = await tx<(MealRow & { items: Record<string, unknown>[] })[]>`
     select
       m.id, m.label, m.partial_values, m.nutrition_totals,
@@ -195,22 +195,39 @@ function notFound(kind: EntryKind, id: number): InputError {
   return new InputError(`${ENTRY_LABEL[kind]} ${id} introuvable (déjà supprimé ?)`);
 }
 
-// Un repas emporte ses aliments (on delete cascade) ; le stock n'est pas touché.
+type Restock = {
+  restocked: { item_id: number; item: string; delta: number; unit: string }[];
+  not_restocked: { item_id: number; item: string; reason: "level" | "unit_changed" }[];
+};
+
+// Un repas emporte ses aliments (on delete cascade). S'il vient de cook_recipe, ce qui avait
+// été décompté du stock y est remis (public.delete_meal) ; sinon le stock n'est pas touché.
 export async function deleteEntry(tx: Tx, { kind, id }: DeleteEntryInput) {
   const at = (column: string) =>
     tx`to_char(${tx(column)} at time zone ${TIMEZONE}, 'YYYY-MM-DD HH24:MI')`;
+  if (kind === "meal") {
+    const [meal] = await tx`
+      select id, label, ${at("eaten_at")} as at from public.meal where id = ${id}`;
+    if (!meal) throw notFound(kind, id);
+    const [row] = await tx<{ result: Restock }[]>`select public.delete_meal(${id}) as result`;
+    const { restocked = [], not_restocked = [] } = row?.result ?? {};
+    return {
+      deleted: { kind, ...meal },
+      ...(restocked.length > 0 && { restocked }),
+      ...(not_restocked.length > 0 && {
+        not_restocked,
+        hint: "Ces articles ont changé de suivi depuis : stock à corriger avec update_item si besoin.",
+      }),
+    };
+  }
   const [deleted] =
-    kind === "meal"
+    kind === "workout"
       ? await tx`
-          delete from public.meal where id = ${id}
-          returning id, label, ${at("eaten_at")} as at`
-      : kind === "workout"
-        ? await tx`
-            delete from public.workout where id = ${id}
-            returning id, type as label, ${at("started_at")} as at`
-        : await tx`
-            delete from public.body_measure where id = ${id}
-            returning id, ${at("measured_at")} as at`;
+          delete from public.workout where id = ${id}
+          returning id, type as label, ${at("started_at")} as at`
+      : await tx`
+          delete from public.body_measure where id = ${id}
+          returning id, ${at("measured_at")} as at`;
   if (!deleted) throw notFound(kind, id);
   return { deleted: { kind, ...deleted } };
 }

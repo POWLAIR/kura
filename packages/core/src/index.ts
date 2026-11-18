@@ -9,6 +9,7 @@ export * from "./notion-export.ts";
 export * from "./nutrients.ts";
 export * from "./off.ts";
 export * from "./purchase.ts";
+export * from "./recipes.ts";
 export * from "./schemas.ts";
 export * from "./text.ts";
 export * from "./tracking.ts";

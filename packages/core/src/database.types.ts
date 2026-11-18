@@ -195,28 +195,28 @@ isOneToOne: false
                   ]
                 },"recipe": {
                   Row: {
-                    "created_at": string,"id": number,"is_favorite": boolean,"origin": Database["public"]['Enums']["recipe_origin"],"servings": number,"steps": NonNullable<Json>,"title": string,"total_minutes": number | null,"updated_at": string,"user_id": string
+                    "created_at": string,"id": number,"idempotency_key": string | null,"is_favorite": boolean,"origin": Database["public"]['Enums']["recipe_origin"],"servings": number,"steps": NonNullable<Json>,"title": string,"total_minutes": number | null,"updated_at": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: never,"is_favorite"?: boolean,"origin": Database["public"]['Enums']["recipe_origin"],"servings"?: number,"steps"?: NonNullable<Json>,"title": string,"total_minutes"?: number | null,"updated_at"?: string,"user_id"?: string
+                    "created_at"?: string,"id"?: never,"idempotency_key"?: string | null,"is_favorite"?: boolean,"origin": Database["public"]['Enums']["recipe_origin"],"servings"?: number,"steps"?: NonNullable<Json>,"title": string,"total_minutes"?: number | null,"updated_at"?: string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: never,"is_favorite"?: boolean,"origin"?: Database["public"]['Enums']["recipe_origin"],"servings"?: number,"steps"?: NonNullable<Json>,"title"?: string,"total_minutes"?: number | null,"updated_at"?: string,"user_id"?: string
+                    "created_at"?: string,"id"?: never,"idempotency_key"?: string | null,"is_favorite"?: boolean,"origin"?: Database["public"]['Enums']["recipe_origin"],"servings"?: number,"steps"?: NonNullable<Json>,"title"?: string,"total_minutes"?: number | null,"updated_at"?: string,"user_id"?: string
                   }
                   Relationships: [
                     
                   ]
                 },"recipe_ingredient": {
                   Row: {
-                    "created_at": string,"food_ref_id": number | null,"id": number,"inventory_item_id": number | null,"quantity": number | null,"recipe_id": number,"unit": Database["public"]['Enums']["quantity_unit"] | null,"user_id": string
+                    "created_at": string,"food_ref_id": number | null,"id": number,"inventory_item_id": number | null,"name": string,"position": number,"quantity": number | null,"recipe_id": number,"unit": Database["public"]['Enums']["quantity_unit"] | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"food_ref_id"?: number | null,"id"?: never,"inventory_item_id"?: number | null,"quantity"?: number | null,"recipe_id": number,"unit"?: Database["public"]['Enums']["quantity_unit"] | null,"user_id"?: string
+                    "created_at"?: string,"food_ref_id"?: number | null,"id"?: never,"inventory_item_id"?: number | null,"name": string,"position"?: number,"quantity"?: number | null,"recipe_id": number,"unit"?: Database["public"]['Enums']["quantity_unit"] | null,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"food_ref_id"?: number | null,"id"?: never,"inventory_item_id"?: number | null,"quantity"?: number | null,"recipe_id"?: number,"unit"?: Database["public"]['Enums']["quantity_unit"] | null,"user_id"?: string
+                    "created_at"?: string,"food_ref_id"?: number | null,"id"?: never,"inventory_item_id"?: number | null,"name"?: string,"position"?: number,"quantity"?: number | null,"recipe_id"?: number,"unit"?: Database["public"]['Enums']["quantity_unit"] | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -241,14 +241,14 @@ isOneToOne: false
                   ]
                 },"stock_movement": {
                   Row: {
-                    "created_at": string,"delta": number,"id": number,"inventory_item_id": number,"meal_id": number | null,"reason": Database["public"]['Enums']["stock_movement_reason"],"user_id": string
+                    "created_at": string,"delta": number,"id": number,"inventory_item_id": number,"meal_id": number | null,"reason": Database["public"]['Enums']["stock_movement_reason"],"unit": Database["public"]['Enums']["quantity_unit"] | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"delta": number,"id"?: never,"inventory_item_id": number,"meal_id"?: number | null,"reason": Database["public"]['Enums']["stock_movement_reason"],"user_id"?: string
+                    "created_at"?: string,"delta": number,"id"?: never,"inventory_item_id": number,"meal_id"?: number | null,"reason": Database["public"]['Enums']["stock_movement_reason"],"unit"?: Database["public"]['Enums']["quantity_unit"] | null,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"delta"?: number,"id"?: never,"inventory_item_id"?: number,"meal_id"?: number | null,"reason"?: Database["public"]['Enums']["stock_movement_reason"],"user_id"?: string
+                    "created_at"?: string,"delta"?: number,"id"?: never,"inventory_item_id"?: number,"meal_id"?: number | null,"reason"?: Database["public"]['Enums']["stock_movement_reason"],"unit"?: Database["public"]['Enums']["quantity_unit"] | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -306,6 +306,17 @@ isOneToOne: false
 { Args: { "p_lease"?: string,"p_quiet"?: string }; Returns: {
               "changes": number,"data_source_id": string,"user_id": string
             }[]
+                           },
+"cook_recipe":
+{ Args: { "p_eaten_at"?: string,"p_idempotency_key": string,"p_portions_cooked"?: number,"p_portions_eaten": number,"p_recipe_id": number }; Returns: {
+              "meal_id": number,"replayed": boolean,"stock": Json
+            }[]
+                           },
+"delete_meal":
+{ Args: { "p_meal_id": number }; Returns: Json
+                           },
+"from_grams":
+{ Args: { "p_density_g_ml": number,"p_grams": number,"p_piece_weight_g": number,"p_unit": Database["public"]['Enums']["quantity_unit"] }; Returns: number
                            },
 "log_meal":
 { Args: { "p_eaten_at"?: string,"p_idempotency_key": string,"p_items": Json,"p_label": string }; Returns: {

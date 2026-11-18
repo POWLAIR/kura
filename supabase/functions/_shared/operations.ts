@@ -1,14 +1,17 @@
 import {
   AddItemsInput,
+  CookRecipeInput,
   CreateApiKeyInput,
   DeleteEntryInput,
   FoodConversionInput,
+  GetRecipesInput,
   InventoryQuery,
   LogMealInput,
   LogWeightInput,
   LogWorkoutInput,
   RemoveItemInput,
   RevokeApiKeyInput,
+  SaveRecipeInput,
   SummaryInput,
   UpdateItemInput,
   UpdateWeightInput,
@@ -25,6 +28,7 @@ import {
   removeItem,
   updateItem,
 } from "./inventory.ts";
+import { cookRecipe, getRecipes, saveRecipe } from "./recipes.ts";
 import {
   deleteEntry,
   getSummary,
@@ -61,6 +65,9 @@ export const OPERATIONS = {
   update_workout: operation(UpdateWorkoutInput, updateWorkout),
   update_weight: operation(UpdateWeightInput, updateWeight),
   get_summary: operation(SummaryInput, getSummary),
+  save_recipe: operation(SaveRecipeInput, (tx, input) => saveRecipe(tx, input)),
+  get_recipes: operation(GetRecipesInput, getRecipes),
+  cook_recipe: operation(CookRecipeInput, cookRecipe),
   // Réglages de l'app seulement : pas de tool MCP pour celles-ci.
   create_api_key: operation(CreateApiKeyInput, createApiKey),
   revoke_api_key: operation(RevokeApiKeyInput, revokeApiKey),

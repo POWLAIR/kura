@@ -139,8 +139,8 @@ Deno.test({
           await tx`insert into public.idempotent_call (idempotency_key, tool) values (${`cle-${id}`}, 'add_items')`;
           const [recipe] = await tx<{ id: number }[]>`
             insert into public.recipe (title, origin) values ('Riz nature', 'manuelle') returning id`;
-          await tx`insert into public.recipe_ingredient (recipe_id, inventory_item_id, quantity, unit)
-                   values (${recipe?.id ?? null}, ${item?.id ?? null}, 100, 'g')`;
+          await tx`insert into public.recipe_ingredient (recipe_id, name, inventory_item_id, quantity, unit)
+                   values (${recipe?.id ?? null}, 'riz', ${item?.id ?? null}, 100, 'g')`;
         });
       }
       // notion_export ne s'écrit que par notion:setup (clé de service), comme ici.
