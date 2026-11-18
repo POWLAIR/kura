@@ -61,6 +61,6 @@ KURA_ENV_FILE=.env.production pnpm <script>  # scripts contre la base déployée
 
 ## Phase en cours
 
-**Phase 2 — App de base** : Expo Android, inventaire, scan Open Food Facts, journal, export Notion, export des données. Critère de fin : courses rangées par scan.
+**Phase 3 — Recettes** : « J'ai cuisiné » (`cook_recipe`), génération de recettes depuis le stock, fiches nutrition, onglet Recettes, favoris et recettes perso, OAuth du serveur MCP. Critère de fin : stock juste sans retouche. Plan : `docs/plan.md`.
 
-La phase 1 (fondations, serveur MCP, clé API) est terminée : son critère, une semaine de suivi via Claude seul, est rempli.
+Les phases 1 et 2 sont terminées et leurs critères remplis.

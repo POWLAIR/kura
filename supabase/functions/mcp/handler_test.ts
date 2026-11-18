@@ -104,14 +104,17 @@ for (const [era, negotiation] of Object.entries({
     assertEquals(client.getServerVersion()?.name, SERVER_INFO.name);
     assertEquals((await client.listTools()).tools.map((t) => t.name).sort(), [
       "add_items",
+      "cook_recipe",
       "delete_entry",
       "get_inventory",
+      "get_recipes",
       "get_shopping_list",
       "get_summary",
       "log_meal",
       "log_weight",
       "log_workout",
       "remove_item",
+      "save_recipe",
       "set_food_conversion",
       "update_item",
       "update_weight",
