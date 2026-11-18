@@ -84,6 +84,20 @@ Deno.test({
       };
       let recipeId = 0;
 
+      await t.step("suggest_recipes : le stock, rien d'enregistré", async () => {
+        const result = await call("suggest_recipes", { max_minutes: 20 });
+        assertEquals(result.filters, { max_minutes: 20 });
+        assertEquals(
+          result.stock.map((l: { name: string; amount: string }) => [l.name, l.amount]),
+          [
+            [`Oeufs ${tag}`, "6 pièces"],
+            [`Riz ${tag}`, "1 kg"],
+            [`Sauce ${tag}`, "Plein"],
+          ],
+        );
+        assertEquals(typeof result.hint, "string");
+      });
+
       await t.step("save_recipe : un aliment ambigu, rien n'est enregistré", async () => {
         const result = await call("save_recipe", recipe);
         assertEquals(result.saved, false);

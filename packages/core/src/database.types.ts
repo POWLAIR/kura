@@ -334,6 +334,9 @@ isOneToOne: false
 "nutrition_amount":
 { Args: { "p_density_g_ml": number,"p_per_100_unit": Database["public"]['Enums']["quantity_unit"],"p_quantity": number,"p_quantity_g": number,"p_unit": Database["public"]['Enums']["quantity_unit"] }; Returns: number
                            },
+"recipe_totals":
+{ Args: { "p_portions"?: number,"p_recipe_id": number }; Returns: Json
+                           },
 "refresh_meal":
 { Args: { "p_meal_id": number }; Returns: undefined
                            },

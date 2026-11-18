@@ -12,7 +12,7 @@ supabase/functions/
     operations.ts   La liste des opérations : un schéma Zod de @kura/core et une fonction chacune
     inventory.ts    get_inventory, add_items, update_item, remove_item, get_shopping_list
     tracking.ts     log_meal, log_workout, log_weight, get_summary, corrections, conversions
-    recipes.ts      save_recipe, get_recipes, cook_recipe
+    recipes.ts      suggest_recipes, save_recipe, get_recipes, cook_recipe
     db.ts           Connexion Postgres et asUser (RLS)
     http.ts         Entrée commune des fonctions de l'app : origine, méthode, session, corps JSON
     session.ts      Vérification du jeton de session auprès de Supabase Auth
@@ -22,6 +22,7 @@ supabase/functions/
   mcp/              Ce que lit Claude : titres, descriptions, consignes ; auth par clé API
   api/              Ce qu'appelle l'app : les opérations, par leur nom
   off-product/      Produit par code-barres (docs/open-food-facts.md)
+  recipes/          Recettes depuis le stock, générées par l'API Anthropic (app seulement)
   delete-account/   Suppression du compte (seule à utiliser la clé service_role)
 ```
 
@@ -33,7 +34,7 @@ Ce qui reste en direct dans l'app, avec supabase-js : les lectures simples (vue 
 
 ## Appel
 
-`POST /functions/v1/api/<opération>`, avec en corps JSON l'entrée de l'opération ; un corps vide vaut `{}`, pour les lectures sans filtre. Les noms et les entrées sont ceux des tools MCP (voir `docs/mcp.md`) : `get_inventory`, `add_items`, `update_item`, `remove_item`, `get_shopping_list`, `log_meal`, `set_food_conversion`, `log_workout`, `log_weight`, `delete_entry`, `update_workout`, `update_weight`, `get_summary`, `save_recipe`, `get_recipes`, `cook_recipe`.
+`POST /functions/v1/api/<opération>`, avec en corps JSON l'entrée de l'opération ; un corps vide vaut `{}`, pour les lectures sans filtre. Les noms et les entrées sont ceux des tools MCP (voir `docs/mcp.md`) : `get_inventory`, `add_items`, `update_item`, `remove_item`, `get_shopping_list`, `log_meal`, `set_food_conversion`, `log_workout`, `log_weight`, `delete_entry`, `update_workout`, `update_weight`, `get_summary`, `suggest_recipes`, `save_recipe`, `get_recipes`, `cook_recipe`.
 
 Depuis l'app :
 
@@ -53,6 +54,18 @@ const { data, error } = await supabase.functions.invoke("api/add_items", {
 | 422 | `refused` | Saisie refusée par la base : `error.message` est le message en français de nos fonctions SQL (article introuvable, unité incompatible…), ou celui de Postgres pour une contrainte (valeur hors bornes, référence inconnue) |
 | 500 | `internal` | Erreur interne ; seul son code est dans les logs |
 | 503 | `auth_unavailable` | Le service d'authentification ne répond pas : réessayer, la session n'est pas en cause |
+
+## Recettes depuis le stock
+
+**`recipes`** (`supabase/functions/recipes/`) propose trois recettes pour l'écran « Qu'est-ce que je mange ? » : `POST /functions/v1/recipes`, corps `{ max_minutes?, craving?, servings? }` (`SuggestRecipesInput`), avec la session de l'utilisateur. C'est la seule fonction qui appelle l'API Anthropic ; depuis Claude, `suggest_recipes` renvoie le stock et Claude propose lui-même (décision D5, `docs/plan.md`).
+
+1. Le stock utilisable est lu sous RLS (`stockForRecipes`) : ni vide ni périmé, ce qui périme dans les trois jours d'abord (`expires_soon`). Stock vide : `{ recipes: [], notice }`, sans appel au modèle.
+2. **Seuls la demande et ce stock partent vers Anthropic** (`recipePrompt` : id, nom, quantité, date de péremption de chaque article). Modèle `claude-opus-5-5`, effort `medium`, sortie structurée validée par le schéma Zod `GeneratedRecipes`, repli côté serveur sur un autre modèle en cas de refus (`fallbacks: "default"`). Le prompt système (`RECIPE_SYSTEM_PROMPT`) interdit les valeurs nutritionnelles et tout commentaire sur la santé, le poids ou les calories.
+3. Chaque recette passe par `generatedToSaveInput` (bornes, `item_id` inconnus ignorés), puis par `saveRecipe` en mode souple (`origin = 'generee'`) : un ingrédient ambigu reste sans référence et compte alors comme « valeurs partielles ».
+4. Réponse : `{ recipes: [ recette, … ] }`, chaque recette comme `get_recipes`, avec `nutrition_per_portion` (calculé par `recipe_totals` depuis `food_ref`) et `uses_expiring` (articles qui périment bientôt qu'elle utilise) ; celles qui en utilisent viennent d'abord.
+5. Les recettes générées de plus de sept jours, ni favorites ni cuisinées, sont supprimées à la génération suivante.
+
+Réponses d'erreur : 400 saisie invalide, 401 sans session, 502 `generation_unavailable` (modèle injoignable, refus, sortie invalide), 500 sinon. Logs : `recipes_generated` (nombre) et `recipes_error` (étape et code), jamais le stock, la demande ni les recettes. Secret : `ANTHROPIC_API_KEY`.
 
 ## Export et suppression du compte
 

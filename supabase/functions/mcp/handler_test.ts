@@ -116,6 +116,7 @@ for (const [era, negotiation] of Object.entries({
       "remove_item",
       "save_recipe",
       "set_food_conversion",
+      "suggest_recipes",
       "update_item",
       "update_weight",
       "update_workout",
