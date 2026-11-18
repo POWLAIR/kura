@@ -1,7 +1,12 @@
 import { z } from "zod";
 import type { Food, FoodMatch } from "./food-match.ts";
 import { PurchaseUnit, type StockAmount, toStockAmount } from "./inventory.ts";
-import { MAIN_NUTRIENTS, type MainNutrientKey } from "./nutrients.ts";
+import {
+  MAIN_NUTRIENTS,
+  type MainNutrientKey,
+  MICRONUTRIENTS,
+  type MicronutrientKey,
+} from "./nutrients.ts";
 import { IdempotencyKey } from "./schemas.ts";
 
 // Suivi : repas, séances, pesées et résumé (docs/conception.md, « Suivi alimentation »,
@@ -328,6 +333,29 @@ export function sumNutrition(meals: MealNutrition[]): NutritionSummary {
     if (known.length === 0) continue;
     const total = known.reduce((sum, m) => sum + (m.totals.values[key] ?? 0), 0);
     summary[key] = Math.round(total * 10) / 10;
+    if (known.length < meals.length || known.some((m) => m.totals.incomplete.includes(key))) {
+      summary.incomplete.push(key);
+    }
+  }
+  return summary;
+}
+
+// Vitamines et minéraux (food_ref.micronutrients) sur plusieurs repas, pour l'affichage
+// dépliable de l'app. Même règle que sumNutrition : clé absente = non renseignée ; renseignée
+// dans une partie des repas seulement = total minimum (incomplete). Arrondi au centième :
+// certaines valeurs se comptent en microgrammes.
+export type MicronutrientSummary = {
+  values: Partial<Record<MicronutrientKey, number>>;
+  incomplete: MicronutrientKey[];
+};
+
+export function sumMicronutrients(meals: MealNutrition[]): MicronutrientSummary {
+  const summary: MicronutrientSummary = { values: {}, incomplete: [] };
+  for (const { key } of MICRONUTRIENTS) {
+    const known = meals.filter((m) => m.totals.values[key] !== undefined);
+    if (known.length === 0) continue;
+    const total = known.reduce((sum, m) => sum + (m.totals.values[key] ?? 0), 0);
+    summary.values[key] = Math.round(total * 100) / 100;
     if (known.length < meals.length || known.some((m) => m.totals.incomplete.includes(key))) {
       summary.incomplete.push(key);
     }

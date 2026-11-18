@@ -78,7 +78,10 @@ export default function JournalScreen() {
         {summary.meals.length > 0 ? (
           <>
             <SectionTitle level={3}>Total des repas</SectionTitle>
-            <NutritionCard nutrition={summary.nutrition} />
+            <NutritionCard
+              nutrition={summary.nutrition}
+              micronutrients={current.day.micronutrients}
+            />
           </>
         ) : null}
         {summary.workout_minutes > 0 ? (
