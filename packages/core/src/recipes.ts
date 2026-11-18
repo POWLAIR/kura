@@ -4,6 +4,7 @@ import { PurchaseUnit, type StockAmount, toStockAmount } from "./inventory.ts";
 import { expiryStatus, formatAmount, type InventoryItemView } from "./inventory-view.ts";
 import type { InventoryLine } from "./purchase.ts";
 import { IdempotencyKey, RecipeOrigin } from "./schemas.ts";
+import type { NutritionSummary } from "./tracking.ts";
 
 // Recettes et « J'ai cuisiné » (docs/conception.md, « Recettes », « Modèle de données »).
 // Les valeurs nutritionnelles viennent de food_ref, calculées en SQL : jamais du modèle.
@@ -405,4 +406,85 @@ export function usesExpiring(
       ),
     ),
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Fiche recette dans l'app (issue #35)
+// ---------------------------------------------------------------------------
+
+// Recette telle que la renvoient get_recipes (avec recipe_id), save_recipe et la fonction
+// recipes : champs vides omis.
+export type RecipeIngredientView = {
+  name: string;
+  quantity?: number;
+  unit?: StockAmount["unit"];
+  food_ref_id?: number;
+  food?: string;
+  item_id?: number;
+  item?: string;
+};
+
+export type RecipeView = {
+  id: number;
+  title: string;
+  origin: "generee" | "manuelle";
+  servings: number;
+  total_minutes?: number;
+  steps: string[];
+  is_favorite?: true;
+  last_cooked?: string;
+  ingredients: RecipeIngredientView[];
+  nutrition_per_portion?: NutritionSummary;
+  // Seulement dans la réponse de la fonction recipes.
+  uses_expiring?: string[];
+};
+
+export type Availability = {
+  status: "available" | "short" | "missing";
+  // « En stock : 1 kg », « Il en reste 150 g », « Pas dans le stock » : des faits.
+  label: string;
+};
+
+// Ce que dit le stock d'un ingrédient de la recette, pour `portions` portions sur
+// `servings`. Un article suivi en niveau ou dans une autre unité est « en stock » : on ne
+// compare pas ce qui ne se compare pas.
+type StockItem = {
+  id: number;
+  quantity?: number | null | undefined;
+  unit?: StockAmount["unit"] | null | undefined;
+  level?: InventoryItemView["level"] | null | undefined;
+};
+
+export function ingredientAvailability(
+  ingredient: RecipeIngredientView,
+  inventory: StockItem[],
+  factor = 1,
+): Availability {
+  const item =
+    ingredient.item_id === undefined
+      ? undefined
+      : inventory.find((i) => i.id === ingredient.item_id);
+  if (!item) return { status: "missing", label: "Pas dans le stock" };
+  const amount = formatAmount({
+    quantity: item.quantity ?? null,
+    unit: item.unit ?? null,
+    level: item.level ?? null,
+  });
+  if (item.level != null) return { status: "available", label: `En stock : ${amount}` };
+  if ((item.quantity ?? 0) <= 0) return { status: "missing", label: "Stock épuisé" };
+  const needed =
+    ingredient.quantity !== undefined && ingredient.unit === item.unit
+      ? ingredient.quantity * factor
+      : null;
+  if (needed !== null && (item.quantity ?? 0) < needed) {
+    return { status: "short", label: `Il en reste ${amount}` };
+  }
+  return { status: "available", label: `En stock : ${amount}` };
+}
+
+// « 200 g », « 2 pièces », ou rien pour « à votre goût ».
+export function ingredientAmount(ingredient: RecipeIngredientView, factor = 1): string {
+  if (ingredient.quantity === undefined || ingredient.unit === undefined) return "à votre goût";
+  const quantity = Math.round(ingredient.quantity * factor * 100) / 100;
+  return formatAmount({ quantity, unit: ingredient.unit });
 }

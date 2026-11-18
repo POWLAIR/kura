@@ -73,7 +73,7 @@ apps/mobile/
 - **Aujourd'hui** : les repas, séances et pesées du jour, lus par `get_summary` comme le Journal ; seulement leur nombre et les minutes de sport, le détail est dans le Journal.
 - **À surveiller** : les articles périmés ou qui périment dans les trois jours (`expiringSoon`), le plus proche d'abord ; un appui ouvre la fiche.
 
-Le bouton « Qu'est-ce que je mange ? » arrive en phase 3. « Réglages » mène aux clés du connecteur et à la déconnexion.
+Le bouton « Qu'est-ce que je mange ? » ouvre les propositions de recettes. « Réglages » mène aux clés du connecteur et à la déconnexion.
 
 ## Onglet Cuisine
 
@@ -99,6 +99,16 @@ Cuisine → « Scanner des courses » (`cuisine/scanner.tsx`, logique dans `src/
 Rien n'est enregistré avant « Tout ranger ». Le scan fonctionne dans Expo Go ; sur le web, la caméra dépend du navigateur, et la saisie du code reste possible.
 
 Les saisies sont validées par les schémas Zod de `packages/core` (`PurchaseItem`, `ItemChanges`) avant l'envoi, puis à nouveau par la fonction.
+
+## Onglet Recettes
+
+Le parcours « cuisiner avec ce qu'on a » de la conception.
+
+- **Liste** (`recettes/index.tsx`) : « Qu'est-ce que je mange ? », puis les recettes enregistrées (`get_recipes`) : favorites, déjà cuisinées, dernières propositions.
+- **Propositions** (`recettes/proposer.tsx`, aussi depuis l'Accueil) : temps disponible, portions, envie facultative, puis la fonction `recipes` (API Anthropic, voir `docs/api.md`). Trois recettes, celles qui utilisent un produit qui périme bientôt d'abord, avec la mention « Utilise ce qui périme bientôt : … » et les valeurs par portion.
+- **Fiche** (`recettes/[id].tsx`) : chaque ingrédient avec ce qu'en dit le stock (`ingredientAvailability` : « En stock : 1 kg », « Il en reste 150 g », « Pas dans le stock »), les étapes, et la carte nutrition par portion (`recipe_totals`, vitamines et minéraux compris).
+- **« J'ai cuisiné »** (`recettes/cuisiner.tsx`) : portions cuisinées (le stock est décompté pour elles, par défaut la recette entière) et portions mangées (le repas les compte), puis `cook_recipe`, avec une clé d'idempotence par saisie. Le récapitulatif liste ce qui a été retiré du stock et ce qui reste à ajuster dans la Cuisine (article suivi en niveau, unité non convertible, stock épuisé), avec un lien vers chaque article, puis « Voir le repas ».
+- **Supprimer un repas cuisiné** depuis sa fiche du Journal remet en stock ce qui avait été retiré.
 
 ## Onglet Journal
 
