@@ -5,6 +5,7 @@ import {
   type MissingConversion,
   mealNutritionOf,
   type RecipeView,
+  type SaveRecipeInput,
   type StoredMealItem,
   type SuggestRecipesInput,
   sumMicronutrients,
@@ -58,4 +59,33 @@ export function cookRecipe(input: {
   idempotency_key: string;
 }): Promise<CookResult> {
   return callApi("cook_recipe", input);
+}
+
+export function setFavorite(
+  recipeId: number,
+  isFavorite: boolean,
+): Promise<{ recipe: RecipeView }> {
+  return callApi("set_recipe_favorite", { recipe_id: recipeId, is_favorite: isFavorite });
+}
+
+export function deleteRecipe(recipeId: number): Promise<unknown> {
+  return callApi("delete_recipe", { recipe_id: recipeId });
+}
+
+// Réponse de save_recipe : la recette, ou les ingrédients à préciser (rien n'est enregistré).
+export type SaveRecipeResult =
+  | { replayed: boolean; recipe: RecipeView }
+  | {
+      saved: false;
+      ambiguous: {
+        index: number;
+        name: string;
+        reason: "food" | "unknown_food" | "several_items" | "unknown_item";
+        candidates: { food_ref_id: number; name: string }[];
+        items: { item_id: number; name: string; location: string }[];
+      }[];
+    };
+
+export function saveRecipe(input: SaveRecipeInput): Promise<SaveRecipeResult> {
+  return callApi("save_recipe", input);
 }

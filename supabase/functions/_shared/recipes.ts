@@ -3,6 +3,7 @@ import {
   CookStockLine,
   cookStockReport,
   createFoodMatcher,
+  type DeleteRecipeInput,
   type Food,
   type GetRecipesInput,
   type IngredientAmbiguity,
@@ -13,6 +14,7 @@ import {
   type ResolveMode,
   resolveRecipeIngredients,
   type SaveRecipeInput,
+  type SetRecipeFavoriteInput,
   type SuggestRecipesInput,
   stockForRecipes,
   sumNutrition,
@@ -205,4 +207,23 @@ export async function suggestRecipes(tx: Tx, filters: SuggestRecipesInput) {
         ? "Le stock est vide : rien à proposer depuis la cuisine."
         : "Proposer trois recettes faisables avec ce stock, en premier celles qui utilisent un article expires_soon, en respectant les filtres. Proposer n'enregistre rien : quand l'utilisateur en choisit une, save_recipe (item_id des articles utilisés) ; quand il l'a cuisinée, cook_recipe. Ne jamais donner de valeurs nutritionnelles soi-même.",
   };
+}
+
+export async function setRecipeFavorite(
+  tx: Tx,
+  { recipe_id, is_favorite }: SetRecipeFavoriteInput,
+) {
+  const [row] = await tx`
+    update public.recipe set is_favorite = ${is_favorite} where id = ${recipe_id} returning id`;
+  if (!row) throw new InputError(`Recette ${recipe_id} introuvable`);
+  return { recipe: await recipeView(tx, recipe_id) };
+}
+
+// La recette et ses ingrédients partent ; les repas déjà cuisinés restent dans le journal
+// (meal.recipe_id remis à null).
+export async function deleteRecipe(tx: Tx, { recipe_id }: DeleteRecipeInput) {
+  const [row] = await tx<{ id: number; title: string }[]>`
+    delete from public.recipe where id = ${recipe_id} returning id, title`;
+  if (!row) throw new InputError(`Recette ${recipe_id} introuvable (déjà supprimée ?)`);
+  return { deleted: row };
 }

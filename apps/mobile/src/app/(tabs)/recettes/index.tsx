@@ -69,7 +69,10 @@ export default function RecipesScreen() {
     }, []),
   );
 
-  const cooked = (recipes ?? []).filter((r) => r.last_cooked && !r.is_favorite);
+  const mine = (recipes ?? []).filter((r) => r.origin === "manuelle" && !r.is_favorite);
+  const cooked = (recipes ?? []).filter(
+    (r) => r.origin === "generee" && r.last_cooked && !r.is_favorite,
+  );
   const favorites = (recipes ?? []).filter((r) => r.is_favorite);
   const proposals = (recipes ?? []).filter(
     (r) => r.origin === "generee" && !r.last_cooked && !r.is_favorite,
@@ -78,10 +81,19 @@ export default function RecipesScreen() {
   return (
     <Screen title="Recettes" intro="Des idées depuis ce qu'il y a dans la cuisine.">
       <Button label="Qu'est-ce que je mange ?" onPress={() => router.push("/recettes/proposer")} />
+      <Button
+        label="Nouvelle recette perso"
+        onPress={() => router.push("/recettes/nouvelle")}
+        variant="secondary"
+      />
       {problem ? <Notice problem>{problem}</Notice> : null}
       {!recipes && !problem ? <ActivityIndicator color={palette.accent} /> : null}
       {favorites.length > 0 ? <SectionTitle>Favorites</SectionTitle> : null}
       {favorites.map((recipe) => (
+        <RecipeRow key={recipe.id} recipe={recipe} />
+      ))}
+      {mine.length > 0 ? <SectionTitle>Mes recettes</SectionTitle> : null}
+      {mine.map((recipe) => (
         <RecipeRow key={recipe.id} recipe={recipe} />
       ))}
       {cooked.length > 0 ? <SectionTitle>Déjà cuisinées</SectionTitle> : null}

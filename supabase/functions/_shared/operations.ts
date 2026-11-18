@@ -3,6 +3,7 @@ import {
   CookRecipeInput,
   CreateApiKeyInput,
   DeleteEntryInput,
+  DeleteRecipeInput,
   FoodConversionInput,
   GetRecipesInput,
   InventoryQuery,
@@ -12,6 +13,7 @@ import {
   RemoveItemInput,
   RevokeApiKeyInput,
   SaveRecipeInput,
+  SetRecipeFavoriteInput,
   SuggestRecipesInput,
   SummaryInput,
   UpdateItemInput,
@@ -29,7 +31,14 @@ import {
   removeItem,
   updateItem,
 } from "./inventory.ts";
-import { cookRecipe, getRecipes, saveRecipe, suggestRecipes } from "./recipes.ts";
+import {
+  cookRecipe,
+  deleteRecipe,
+  getRecipes,
+  saveRecipe,
+  setRecipeFavorite,
+  suggestRecipes,
+} from "./recipes.ts";
 import {
   deleteEntry,
   getSummary,
@@ -74,6 +83,8 @@ export const OPERATIONS = {
   create_api_key: operation(CreateApiKeyInput, createApiKey),
   revoke_api_key: operation(RevokeApiKeyInput, revokeApiKey),
   export_data: operation(z.object({}), (tx) => exportData(tx)),
+  set_recipe_favorite: operation(SetRecipeFavoriteInput, setRecipeFavorite),
+  delete_recipe: operation(DeleteRecipeInput, deleteRecipe),
 };
 
 export type OperationName = keyof typeof OPERATIONS;

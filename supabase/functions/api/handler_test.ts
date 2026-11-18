@@ -415,6 +415,47 @@ Deno.test({
           assertEquals(JSON.stringify(data).includes("key_hash"), false);
         },
       );
+      await t.step("recette perso : favorite, puis supprimée, le repas reste", async () => {
+        const saved = await call(user, "save_recipe", {
+          title: `Gomasio maison ${tag}`,
+          servings: 1,
+          steps: ["Griller le sésame."],
+          ingredients: [{ name: `sésame ${tag}`, quantity: 50, unit: "g", food_ref_id: null }],
+          origin: "manuelle",
+          idempotency_key: `recette-${tag}`,
+        });
+        assertEquals([saved.status, saved.data.recipe.origin], [200, "manuelle"]);
+        const recipeId = saved.data.recipe.id;
+
+        const foreign = await call(other, "set_recipe_favorite", {
+          recipe_id: recipeId,
+          is_favorite: true,
+        });
+        assertEquals([foreign.status, foreign.data.error.code], [422, "refused"]);
+        const favorite = await call(user, "set_recipe_favorite", {
+          recipe_id: recipeId,
+          is_favorite: true,
+        });
+        assertEquals(favorite.data.recipe.is_favorite, true);
+        const favorites = await call(user, "get_recipes", { favorites_only: true });
+        assertEquals(
+          favorites.data.recipes.map((r: { id: number }) => r.id),
+          [recipeId],
+        );
+
+        const cooked = await call(user, "cook_recipe", {
+          recipe_id: recipeId,
+          portions_eaten: 1,
+          idempotency_key: `cuisine-${tag}`,
+        });
+        assertEquals(cooked.status, 200);
+        assertEquals((await call(other, "delete_recipe", { recipe_id: recipeId })).status, 422);
+        const deleted = await call(user, "delete_recipe", { recipe_id: recipeId });
+        assertEquals(deleted.data.deleted, { id: recipeId, title: `Gomasio maison ${tag}` });
+        const [meal] =
+          await sql`select recipe_id from public.meal where id = ${cooked.data.meal.id}`;
+        assertEquals(meal, { recipe_id: null });
+      });
     } finally {
       await sql`delete from auth.users where id in (${user}, ${other})`;
       await sql`delete from public.food_ref where code like ${`test-${tag}-%`}`;

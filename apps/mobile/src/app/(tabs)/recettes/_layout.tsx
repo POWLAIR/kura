@@ -18,6 +18,7 @@ export default function RecipesLayout() {
       <Stack.Screen name="proposer" options={{ title: "Qu'est-ce que je mange ?" }} />
       <Stack.Screen name="[id]" options={{ title: "Recette" }} />
       <Stack.Screen name="cuisiner" options={{ title: "J'ai cuisiné" }} />
+      <Stack.Screen name="nouvelle" options={{ title: "Nouvelle recette" }} />
     </Stack>
   );
 }
