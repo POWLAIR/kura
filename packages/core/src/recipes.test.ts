@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { createFoodMatcher, type Food } from "./food-match.ts";
+import type { InventoryItemView } from "./inventory-view.ts";
 import type { InventoryLine } from "./purchase.ts";
 import {
   CookRecipeInput,
   cookStockReport,
+  generatedToSaveInput,
   type IngredientContext,
   RecipeIngredientInput,
+  recipePrompt,
   resolveRecipeIngredients,
   SaveRecipeInput,
+  stockForRecipes,
+  usesExpiring,
 } from "./recipes.ts";
 
 const foods: Food[] = [
@@ -157,5 +162,101 @@ describe("cookStockReport", () => {
       [2, "le stock est arrivé à 0 avant la quantité de la recette"],
       [3, "article suivi en niveau"],
     ]);
+  });
+});
+
+describe("propositions depuis le stock", () => {
+  const today = "2026-11-18";
+  const items = [
+    { id: 1, name: "Riz", category: "feculents", location: "placard", quantity: 1000, unit: "g" },
+    {
+      id: 2,
+      name: "Yaourt",
+      category: "frais",
+      location: "frigo",
+      quantity: 2,
+      unit: "piece",
+      expires_on: "2026-11-19",
+    },
+    {
+      id: 3,
+      name: "Crème",
+      category: "frais",
+      location: "frigo",
+      quantity: 20,
+      unit: "cl",
+      expires_on: "2026-11-10",
+    },
+    { id: 4, name: "Sauce soja", category: "sauces", location: "placard", level: "moitie" },
+    { id: 5, name: "Farine", category: "feculents", location: "placard", quantity: 0, unit: "g" },
+    {
+      id: 6,
+      name: "Courgette",
+      category: "frais",
+      location: "frigo",
+      quantity: 1,
+      unit: "piece",
+      expires_on: "2026-12-01",
+    },
+  ] as InventoryItemView[];
+
+  it("stockForRecipes : ce qui périme d'abord, ni vide ni périmé", () => {
+    expect(stockForRecipes(items, today)).toEqual([
+      {
+        item_id: 2,
+        name: "Yaourt",
+        amount: "2 pièces",
+        expires_on: "2026-11-19",
+        expires_soon: true,
+      },
+      { item_id: 6, name: "Courgette", amount: "1 pièce", expires_on: "2026-12-01" },
+      { item_id: 1, name: "Riz", amount: "1 kg" },
+      { item_id: 4, name: "Sauce soja", amount: "Moitié" },
+    ]);
+  });
+
+  const stock = stockForRecipes(items, today);
+  const generated = {
+    title: " Riz au yaourt ",
+    servings: 2.4,
+    total_minutes: 0,
+    steps: ["Cuire.", " "],
+    ingredients: [
+      { name: "riz", quantity: 150, unit: "g" as const, item_id: 1 },
+      { name: "yaourt", quantity: 1, unit: "piece" as const, item_id: 2 },
+      { name: "sel", quantity: null, unit: null, item_id: null },
+      { name: "beurre", quantity: 10, unit: null, item_id: 99 },
+    ],
+  };
+
+  it("generatedToSaveInput : bornes, ids inconnus ignorés, quantité sans unité retirée", () => {
+    expect(generatedToSaveInput(generated, stock, "gen-00000001")).toEqual({
+      title: "Riz au yaourt",
+      servings: 2,
+      steps: ["Cuire."],
+      ingredients: [
+        { name: "riz", quantity: 150, unit: "g", item_id: 1 },
+        { name: "yaourt", quantity: 1, unit: "piece", item_id: 2 },
+        { name: "sel" },
+        { name: "beurre" },
+      ],
+      origin: "generee",
+      idempotency_key: "gen-00000001",
+    });
+    expect(
+      generatedToSaveInput({ ...generated, ingredients: [] }, stock, "gen-00000002"),
+    ).toBeNull();
+  });
+
+  it("usesExpiring : les articles qui périment bientôt", () => {
+    expect(usesExpiring(generated.ingredients, stock)).toEqual(["Yaourt"]);
+    expect(usesExpiring([{ item_id: 1 }], stock)).toEqual([]);
+  });
+
+  it("recipePrompt : seulement la demande et le stock", () => {
+    expect(JSON.parse(recipePrompt(stock, { max_minutes: 20 }))).toEqual({
+      demande: { max_minutes: 20 },
+      stock,
+    });
   });
 });
