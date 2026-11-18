@@ -79,6 +79,16 @@ export const GetRecipesInput = z.object({
 });
 export type GetRecipesInput = z.infer<typeof GetRecipesInput>;
 
+// Favorites et suppression : opérations de l'app seulement (pas de tool MCP).
+export const SetRecipeFavoriteInput = z.object({
+  recipe_id: Id,
+  is_favorite: z.boolean(),
+});
+export type SetRecipeFavoriteInput = z.infer<typeof SetRecipeFavoriteInput>;
+
+export const DeleteRecipeInput = z.object({ recipe_id: Id });
+export type DeleteRecipeInput = z.infer<typeof DeleteRecipeInput>;
+
 // ---------------------------------------------------------------------------
 // Ingrédients : rapprochement de food_ref et de l'inventaire
 // ---------------------------------------------------------------------------

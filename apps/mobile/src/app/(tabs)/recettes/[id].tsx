@@ -12,7 +12,8 @@ import { NutritionCard } from "@/components/nutrition-card";
 import { Button, Notice, SectionTitle, Tag } from "@/components/ui";
 import { useInventory } from "@/inventory/use-inventory";
 import { errorMessage } from "@/lib/api-error";
-import { fetchRecipe } from "@/recipes/data";
+import { confirm } from "@/lib/confirm";
+import { deleteRecipe, fetchRecipe, setFavorite } from "@/recipes/data";
 import { spacing, usePalette } from "@/theme";
 
 const AVAILABILITY_TAG: Record<Availability["status"], boolean> = {
@@ -36,6 +37,38 @@ export default function RecipeScreen() {
     micronutrients: MicronutrientSummary;
   } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function toggleFavorite() {
+    if (!data) return;
+    setPending(true);
+    try {
+      const { recipe } = await setFavorite(data.recipe.id, !data.recipe.is_favorite);
+      setData({ ...data, recipe });
+    } catch (error) {
+      setProblem(errorMessage(error));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function remove() {
+    if (!data) return;
+    const confirmed = await confirm(
+      `Supprimer « ${data.recipe.title} » ?`,
+      "La recette est supprimée. Les repas déjà cuisinés restent dans le journal.",
+      "Supprimer",
+    );
+    if (!confirmed) return;
+    setPending(true);
+    try {
+      await deleteRecipe(data.recipe.id);
+      router.back();
+    } catch (error) {
+      setProblem(errorMessage(error));
+      setPending(false);
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -89,6 +122,13 @@ export default function RecipeScreen() {
             router.push({ pathname: "/recettes/cuisiner", params: { id: String(recipe.id) } })
           }
         />
+        <Button
+          busy={pending}
+          label={recipe.is_favorite ? "Retirer des favorites" : "Ajouter aux favorites"}
+          onPress={toggleFavorite}
+          variant="secondary"
+        />
+        {problem ? <Notice problem>{problem}</Notice> : null}
 
         <SectionTitle>Ingrédients</SectionTitle>
         {recipe.ingredients.map((ingredient) => {
@@ -135,6 +175,8 @@ export default function RecipeScreen() {
             />
           </>
         ) : null}
+
+        <Button disabled={pending} label="Supprimer la recette" onPress={remove} variant="quiet" />
       </View>
     </ScrollView>
   );
