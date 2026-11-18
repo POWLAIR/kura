@@ -70,7 +70,16 @@ Dans claude.ai, va dans **Paramètres → Connecteurs → Ajouter un connecteur 
 
 Un connecteur ajouté sur le web est aussi disponible dans les apps Claude iOS et Android. Active-le dans une conversation avec le menu des outils.
 
-Ne mets jamais la clé dans l'URL : elle finirait dans les logs. Si un jour le formulaire n'offrait plus aucun en-tête, la solution serait d'avancer l'OAuth de Supabase Auth, prévu en phase 3.
+Ne mets jamais la clé dans l'URL : elle finirait dans les logs.
+
+**Sans clé, par OAuth** (recommandé pour claude.ai, voir `docs/mcp.md`). Une fois dans le dashboard Supabase :
+
+1. **Authentication → JWT Keys** : passer à une clé de signature asymétrique (ES256) si ce n'est pas déjà fait. Les sessions en cours restent valides.
+2. **Authentication → OAuth Server** : activer le serveur, l'enregistrement dynamique des clients, et le chemin d'autorisation `/oauth/consent`.
+3. **Authentication → URL Configuration** : `Site URL` = `https://powlair.github.io/kura`, l'app web qui porte l'écran de consentement. Vérifier ensuite que la redirection d'autorisation aboutit bien à `https://powlair.github.io/kura/oauth/consent?authorization_id=…` (sous-chemin de GitHub Pages compris).
+4. Déployer l'app web (workflow `pages.yml`) et la fonction `mcp`.
+
+Dans claude.ai, le connecteur se crée alors avec la seule URL `https://<ref>.supabase.co/functions/v1/mcp`, **sans en-tête** : Claude ouvre l'écran de consentement de Kura, on se connecte, on autorise, et c'est tout. Pour vérifier la découverte : `curl https://<ref>.supabase.co/functions/v1/mcp/oauth-protected-resource` doit donner `authorization_servers: ["https://<ref>.supabase.co/auth/v1"]`, égal à l'`issuer` de `https://<ref>.supabase.co/.well-known/oauth-authorization-server/auth/v1`. L'accès se retire dans les réglages de l'app, « Applications connectées ». Si la connexion OAuth échoue côté claude.ai, le connecteur par clé ci-dessus reste disponible ; le repli prévu par la conception est Cloudflare Workers.
 
 **Claude Code**, avec une clé à part, révocable séparément :
 

@@ -138,6 +138,11 @@ Accueil → « Réglages » (`src/app/reglages.tsx`).
 
 `pnpm mcp:key` reste utilisable depuis un terminal (voir `docs/mcp.md`).
 
+## Connexion d'une application (OAuth)
+
+- **Consentement** (`app/oauth/consent.tsx`) : l'écran où Supabase Auth envoie l'utilisateur quand le connecteur claude.ai demande l'accès (voir `docs/mcp.md`). Accessible avec ou sans session : sans session, il propose la connexion sans perdre la demande. Il montre l'application et ce qu'elle pourra faire, puis « Autoriser » ou « Refuser », et renvoie vers l'application dans le même onglet.
+- **Applications connectées** (Réglages, `components/connected-apps.tsx`) : les applications autorisées, avec leur date, et « Retirer », qui révoque l'accès et leurs sessions. La section n'apparaît pas si le serveur OAuth n'est pas activé sur le projet.
+
 ## Version web (PWA)
 
 L'app web est publiée sur GitHub Pages, à l'adresse https://powlair.github.io/kura/, et s'installe depuis le navigateur (Chrome ou Edge : icône d'installation dans la barre d'adresse).
