@@ -8,7 +8,9 @@ import { SessionProvider, useSession } from "@/auth/session";
 
 SplashScreen.preventAutoHideAsync();
 
-// Sans session, seul l'écran de connexion est accessible ; avec, seuls les onglets.
+// Sans session, seul l'écran de connexion est accessible ; avec, seuls les onglets. L'écran
+// de consentement OAuth est accessible dans les deux cas : il propose la connexion lui-même,
+// sans perdre la demande en cours.
 function RootStack() {
   const { session, loading } = useSession();
 
@@ -29,6 +31,7 @@ function RootStack() {
       <Stack.Protected guard={session === null}>
         <Stack.Screen name="sign-in" />
       </Stack.Protected>
+      <Stack.Screen name="oauth/consent" />
     </Stack>
   );
 }

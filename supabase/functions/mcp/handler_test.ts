@@ -1,14 +1,22 @@
 import { generateApiKey, hashApiKey } from "@kura/core";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { assertEquals, assertRejects } from "@std/assert";
-import type { Caller } from "../_shared/db.ts";
-import { createHandler } from "./handler.ts";
+import { createHandler, type McpCaller } from "./handler.ts";
 import { buildServer, SERVER_INFO } from "./server.ts";
 
 const URL_MCP = new URL("http://localhost/functions/v1/mcp");
 const key = generateApiKey();
 const keyHash = await hashApiKey(key);
-const builtFor: Caller[] = [];
+const builtFor: McpCaller[] = [];
+
+const OAUTH = {
+  findUser: (token: string) => {
+    if (token === "jeton-panne") return Promise.reject(new Error("auth injoignable"));
+    return Promise.resolve(token === "jeton-oauth" ? "user-b" : null);
+  },
+  resource: "https://projet.supabase.co/functions/v1/mcp",
+  authorizationServer: "https://projet.supabase.co/auth/v1",
+};
 
 const handler = createHandler({
   findCaller: (hash) => Promise.resolve(hash === keyHash ? { keyId: 7, userId: "user-a" } : null),
@@ -16,6 +24,7 @@ const handler = createHandler({
     builtFor.push(caller);
     return buildServer(() => Promise.reject(new Error("pas de base dans ce test")));
   },
+  oauth: OAUTH,
 });
 
 function post(headers: Record<string, string>): Promise<Response> {
@@ -121,7 +130,7 @@ for (const [era, negotiation] of Object.entries({
       "update_weight",
       "update_workout",
     ]);
-    assertEquals(builtFor.at(-1), { keyId: 7, userId: "user-a" });
+    assertEquals(builtFor.at(-1), { via: "api_key", keyId: 7, userId: "user-a" });
     await client.close();
   });
 }
@@ -130,4 +139,75 @@ Deno.test("client MCP refusé sans clé valide", async () => {
   const { client, connected } = connect(`Bearer ${generateApiKey()}`, "legacy");
   await assertRejects(() => connected);
   await client.close();
+});
+
+// ---------------------------------------------------------------------------
+// OAuth 2.1 de Supabase Auth (issue #38)
+// ---------------------------------------------------------------------------
+
+Deno.test("métadonnées de ressource protégée : publiques, avec le serveur d'autorisation", async () => {
+  for (const path of ["oauth-protected-resource", ".well-known/oauth-protected-resource"]) {
+    const res = await handler(new Request(`${URL_MCP}/${path}`));
+    assertEquals(res.status, 200);
+    assertEquals(res.headers.get("access-control-allow-origin"), "*");
+    assertEquals(await res.json(), {
+      resource: OAUTH.resource,
+      authorization_servers: [OAUTH.authorizationServer],
+      bearer_methods_supported: ["header"],
+      resource_name: "Kura",
+    });
+  }
+  const preflight = await handler(
+    new Request(`${URL_MCP}/oauth-protected-resource`, { method: "OPTIONS" }),
+  );
+  assertEquals(preflight.status, 204);
+});
+
+Deno.test("401 : le challenge indique où trouver les métadonnées", async () => {
+  const res = await post({});
+  assertEquals(res.status, 401);
+  assertEquals(
+    res.headers
+      .get("www-authenticate")
+      ?.endsWith(`resource_metadata="${OAUTH.resource}/oauth-protected-resource"`),
+    true,
+  );
+  await res.body?.cancel();
+});
+
+Deno.test("jeton OAuth : accepté pour son utilisateur, refusé sinon, 503 si Auth ne répond pas", async () => {
+  builtFor.length = 0;
+  const accepted = await post({ authorization: "Bearer jeton-oauth" });
+  assertEquals(accepted.status, 200);
+  await accepted.body?.cancel();
+  assertEquals(builtFor.at(-1), { via: "oauth", userId: "user-b" });
+
+  const refused = await post({ authorization: "Bearer jeton-inconnu" });
+  assertEquals(refused.status, 401);
+  await refused.body?.cancel();
+
+  const down = await post({ authorization: "Bearer jeton-panne" });
+  assertEquals(down.status, 503);
+  assertEquals(down.headers.get("www-authenticate"), null);
+  await down.body?.cancel();
+});
+
+Deno.test("sans configuration OAuth, un jeton n'est pas accepté", async () => {
+  const keyOnly = createHandler({
+    findCaller: () => Promise.resolve(null),
+    buildServer: () => buildServer(() => Promise.reject(new Error("pas de base"))),
+  });
+  const res = await keyOnly(
+    new Request(URL_MCP, {
+      method: "POST",
+      headers: { authorization: "Bearer jeton-oauth", "content-type": "application/json" },
+      body: "{}",
+    }),
+  );
+  assertEquals(res.status, 401);
+  assertEquals(res.headers.get("www-authenticate")?.includes("resource_metadata"), false);
+  await res.body?.cancel();
+  const metadata = await keyOnly(new Request(`${URL_MCP}/oauth-protected-resource`));
+  assertEquals(metadata.status === 200, false);
+  await metadata.body?.cancel();
 });

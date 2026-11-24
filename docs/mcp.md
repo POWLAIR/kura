@@ -17,8 +17,8 @@ Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`
 - **Droits d'une session** : une session (app ou tools MCP) peut créer, lire, révoquer et supprimer ses clés. Elle ne peut ni réactiver une clé révoquée, ni réécrire son hash.
 - **Refus** : une clé absente, mal formée, inconnue ou révoquée reçoit un `401` avec `WWW-Authenticate: Bearer error="invalid_token"`. Si la base ne répond pas, le serveur renvoie un `503` : le client réessaie au lieu de croire sa clé révoquée.
 - **Suivi** : chaque requête acceptée met à jour `last_used_at`.
-- **Vérification Supabase** : `verify_jwt = false` dans `supabase/config.toml`, car le serveur ne reçoit pas de JWT Supabase.
-- **Phase 3** : OAuth 2.1 de Supabase Auth.
+- **Vérification Supabase** : `verify_jwt = false` dans `supabase/config.toml` : le serveur vérifie lui-même la clé ou le jeton, et la passerelle refuserait sinon la découverte OAuth, faite sans jeton.
+- **Toujours acceptée** à côté de l'OAuth (décision D6) : pour Claude Code, l'inspecteur MCP et les scripts.
 
 ```bash
 pnpm mcp:key --user <email> [--label "Claude desktop"]   # crée une clé (affichée une fois)
@@ -28,6 +28,21 @@ pnpm mcp:key --revoke kura_AbCdEfG                        # révoque, par les 12
 Les clés se gèrent aussi depuis les réglages de l'app (voir `docs/app.md`), par les opérations `create_api_key` et `revoke_api_key` de la fonction `api`. Ces deux opérations ne sont pas des tools MCP : une clé ne crée pas d'autres clés.
 
 Lance `pnpm mcp:key` toi-même : la clé apparaît dans le terminal. Les variables `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont lues dans `.env`.
+
+## Authentification OAuth 2.1 (phase 3)
+
+Le connecteur claude.ai se connecte sans clé : Claude agit en tant que l'utilisateur, avec un jeton de Supabase Auth, et la RLS s'applique comme pour l'app.
+
+1. **Découverte** : sans clé ni jeton valable, le `401` porte `WWW-Authenticate: Bearer error="invalid_token", …, resource_metadata="<fonction>/oauth-protected-resource"`. Ce document (RFC 9728), public, servi aussi sous `/.well-known/oauth-protected-resource`, donne la ressource (`…/functions/v1/mcp`) et son serveur d'autorisation : `…/auth/v1`, le serveur OAuth 2.1 de Supabase Auth.
+2. **Enregistrement** : Claude s'enregistre seul (enregistrement dynamique des clients), puis lance un flux « authorization code » avec PKCE.
+3. **Consentement** : Supabase Auth envoie l'utilisateur sur l'écran de l'app `oauth/consent?authorization_id=…` (`site_url` + `authorization_url_path`). L'écran propose la connexion s'il n'y a pas de session, montre l'application qui demande l'accès, puis « Autoriser » ou « Refuser » (`supabase.auth.oauth.approveAuthorization`, `denyAuthorization`) et renvoie vers Claude dans le même onglet. Voir `docs/app.md`.
+4. **Requêtes** : un `Authorization: Bearer <jeton>` qui n'est pas une clé `kura_…` est vérifié par Supabase Auth (`authUserFinder`, `GET /auth/v1/user`, comme pour l'API de l'app) : signature, expiration, session encore valide. Un accès retiré dans les réglages, ou un compte supprimé, est donc refusé tout de suite. L'appelant devient `{ via: "oauth", userId }`, puis tout passe par `asUser`.
+5. **Retrait** : l'app liste les applications autorisées et retire un accès (`listGrants`, `revokeGrant`), ce qui révoque aussi leurs sessions.
+
+- **URL publique** : la ressource et le serveur d'autorisation sont construits depuis `SUPABASE_URL`, l'adresse du projet en ligne. En local, les fonctions voient l'adresse interne `http://kong:8000` : `KURA_PUBLIC_URL = "http://127.0.0.1:54321"` est donné dans `[edge_runtime.secrets]` de `supabase/config.toml`.
+- **Jetons** : signés en ES256 (clé de signature asymétrique, requise par le serveur OAuth), `aud = "authenticated"`, avec le `client_id` de Claude. Supabase ignore pour l'instant le paramètre `resource` (RFC 8707) : le jeton n'est pas lié à cette ressource, mais il ne donne accès qu'aux données de l'utilisateur, sous RLS.
+- **Logs** : `auth_refused` dit seulement `token_refused` pour un jeton refusé ; ni jeton, ni identifiant.
+- **Tests** : `handler_test.ts` couvre les métadonnées, le challenge, un jeton accepté, refusé, Auth injoignable (`503`), et un serveur sans OAuth. Le flux complet (enregistrement, consentement dans l'app, échange du code, `get_inventory` avec le jeton) a été déroulé en local.
 
 ## Données : toujours sous RLS
 

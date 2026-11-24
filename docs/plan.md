@@ -1,18 +1,18 @@
 # Plan d'implémentation — ce qui reste à faire
 
-> État au 2026-11-10, établi depuis le code de `main` (29295f7), `docs/conception.md` et les issues GitHub. La conception reste la référence ; ce plan dit dans quel ordre la réaliser et ce qui n'a pas encore d'issue.
+> État au 2026-11-18 (phase 3 en PR), établi depuis le code, `docs/conception.md` et les issues GitHub. La conception reste la référence ; ce plan dit dans quel ordre la réaliser et ce qui n'a pas encore d'issue.
 
 ## Où on en est
 
 | Phase | Issues | État |
 |---|---|---|
-| 1 — Fondations | 8 fermées, 1 ouverte (#9) | Code terminé et déployé (eu-west-1, serveur 0.5.0, 12 tools). Reste le test réel sur mobile et le critère de fin. |
-| 2 — App de base | 11 ouvertes (#23 à #32, #42) | Rien de commencé : `apps/mobile` n'existe pas. |
-| 3 — Recettes | 6 ouvertes (#33 à #38) | Tables `recipe` et `recipe_ingredient` créées, rien d'autre. |
+| 1 — Fondations | 9 fermées | Terminée, critère rempli. |
+| 2 — App de base | 13 fermées | Terminée, critère rempli. |
+| 3 — Recettes | 6 en PR empilées (#33 à #38) | Code terminé, à merger et déployer ; reste le critère de fin, à l'usage. |
 | 4 — Santé | 4 ouvertes (#43 à #46) | Colonnes `source` et `external_id` prêtes, avec leur contrainte d'unicité. |
 | 5 — Compagnon | 7 ouvertes (#47 à #53) | Table `companion_event` créée, jamais écrite. |
 
-Des dix tools de la conception, il manque `suggest_recipes` et `cook_recipe` (phase 3). Quatre tools ont été ajoutés en plus : `set_food_conversion`, `delete_entry`, `update_workout`, `update_weight`.
+Les dix tools de la conception existent. Six ont été ajoutés en plus : `set_food_conversion`, `delete_entry`, `update_workout`, `update_weight`, `save_recipe` et `get_recipes` (serveur 0.9.0, 17 tools avec `remove_item`).
 
 ## Ce qui manquait d'issue
 
@@ -90,6 +90,13 @@ Décisions prises le 2026-11-17 (première option recommandée chaque fois) :
 - **Portions** : le stock est décrémenté pour les portions cuisinées (par défaut toute la recette), le repas compte les portions mangées ; les restes ne sont pas suivis.
 
 Ordre de réalisation (branches empilées) : #33, #34, #37, #35, #36, #38.
+
+Après le merge de la pile, à faire à la main (détail dans chaque PR et `docs/deploiement.md`) :
+1. `supabase db push`, puis `pnpm functions:deploy` (nouvelle fonction `recipes`).
+2. `pnpm exec supabase secrets set ANTHROPIC_API_KEY=…`, puis un premier « Qu'est-ce que je mange ? » réel depuis l'app (jamais essayé contre l'API : pas de clé en local).
+3. Relire les fiches « À quoi ça sert » (#37) avant le merge.
+4. Dashboard Supabase : clé de signature asymétrique, serveur OAuth, Site URL de l'app web ; puis le connecteur claude.ai sans clé (#38).
+5. Le critère : cuisiner plusieurs recettes d'affilée (app et Claude), puis comparer le stock réel à `get_inventory`.
 
 | Ordre | Issue | Contenu | Dépend de |
 |---|---|---|---|
