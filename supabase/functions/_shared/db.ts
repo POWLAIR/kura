@@ -3,7 +3,7 @@ import postgres from "postgres";
 // Accès Postgres du serveur MCP. La connexion (SUPABASE_DB_URL) ne sert en clair qu'à
 // retrouver la clé API ; tout le reste passe par asUser, donc par la RLS.
 
-type Types = { numeric: number; bigint: number };
+type Types = { numeric: number; bigint: number; date: string };
 export type Sql = postgres.Sql<Types>;
 export type Tx = postgres.TransactionSql<Types>;
 export type Caller = { keyId: number; userId: string };
@@ -11,6 +11,9 @@ export type Caller = { keyId: number; userId: string };
 // numeric et bigint arrivent en texte par défaut : on les lit en nombres JS. Les ids et
 // les quantités de l'inventaire restent très loin de 2^53.
 const asNumber = { serialize: (x: number) => String(x), parse: (x: string) => Number(x) };
+// date (péremption) : gardée telle quelle, « AAAA-MM-JJ ». Sans cela, postgres.js en fait un
+// Date, sérialisé « 2026-11-19T00:00:00.000Z » dans les réponses et dans l'export Notion.
+const asText = { serialize: (x: string) => x, parse: (x: string) => x };
 
 export function connect(url: string): Sql {
   return postgres(url, {
@@ -20,6 +23,7 @@ export function connect(url: string): Sql {
     types: {
       numeric: { to: 1700, from: [1700], ...asNumber },
       bigint: { to: 20, from: [20], ...asNumber },
+      date: { to: 1082, from: [1082], ...asText },
     },
   });
 }

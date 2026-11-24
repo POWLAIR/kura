@@ -167,12 +167,13 @@ Il n'y a aucun objectif ni jugement, et les descriptions des tools rappellent à
 
 | Tool | Rôle |
 |---|---|
+| `suggest_recipes` | Stock utilisable, ce qui périme bientôt d'abord, et les filtres (temps, envie, portions) : Claude propose lui-même |
 | `save_recipe` | Enregistre une recette choisie ou dictée : titre, portions, temps, étapes, ingrédients |
-| `get_recipes` | Recettes enregistrées (favorites d'abord), ou une recette en détail |
+| `get_recipes` | Recettes enregistrées (favorites d'abord), ou une recette en détail avec ses valeurs par portion (`recipe_totals`, depuis `food_ref`) |
 | `cook_recipe` | « J'ai cuisiné » : repas et stock d'un bloc |
 
 - **Entrées** : schémas Zod et logique pure dans `packages/core/src/recipes.ts` ; opérations dans `_shared/recipes.ts`.
-- **Proposer n'enregistre rien.** Claude part de `get_inventory` et propose ; `save_recipe` n'est appelé que quand l'utilisateur choisit une recette ou dicte la sienne (`origin` : `generee` ou `manuelle`).
+- **Proposer n'enregistre rien.** Claude part de `suggest_recipes` (même tri que la fonction `recipes` de l'app, sans appel à l'API Anthropic : décision D5) et propose ; `save_recipe` n'est appelé que quand l'utilisateur choisit une recette ou dicte la sienne (`origin` : `generee` ou `manuelle`).
 
 ### `save_recipe` : ingrédients rattachés, jamais devinés
 

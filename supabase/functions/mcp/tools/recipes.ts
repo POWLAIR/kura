@@ -3,11 +3,24 @@ import { OPERATIONS } from "../../_shared/operations.ts";
 import type { UserDb } from "../server.ts";
 import { ok, userErrors } from "./result.ts";
 
-// Tools de recettes (issue #33) : save_recipe, get_recipes, cook_recipe.
+// Tools de recettes (issues #33, #34) : suggest_recipes, save_recipe, get_recipes, cook_recipe.
 // Ici, seulement ce que lit Claude ; la logique est dans _shared/recipes.ts, partagée avec
 // l'API de l'app.
 
 export function registerRecipeTools(server: McpServer, db: UserDb): void {
+  server.registerTool(
+    "suggest_recipes",
+    {
+      title: "Proposer des recettes",
+      description:
+        "Renvoie le stock utilisable pour proposer des recettes, ce qui périme bientôt d'abord (expires_soon), avec les filtres : temps disponible, envie, portions. Proposer ensuite soi-même trois recettes faisables, celles qui utilisent un article expires_soon en premier. Rien n'est enregistré : save_recipe quand l'utilisateur en choisit une, cook_recipe quand il l'a cuisinée. Ne jamais donner de valeurs nutritionnelles soi-même.",
+      inputSchema: OPERATIONS.suggest_recipes.input,
+      annotations: { readOnlyHint: true },
+    },
+    (input) =>
+      userErrors(async () => ok(await db((tx) => OPERATIONS.suggest_recipes.run(tx, input)))),
+  );
+
   server.registerTool(
     "save_recipe",
     {

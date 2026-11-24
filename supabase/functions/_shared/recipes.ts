@@ -7,15 +7,21 @@ import {
   type GetRecipesInput,
   type IngredientAmbiguity,
   type InventoryLine,
+  localDate,
+  mealNutritionOf,
   missingConversions,
   type ResolveMode,
   resolveRecipeIngredients,
   type SaveRecipeInput,
+  type SuggestRecipesInput,
+  stockForRecipes,
+  sumNutrition,
   TIMEZONE,
 } from "@kura/core";
 import { z } from "zod";
 import type { Tx } from "./db.ts";
 import { compact, InputError } from "./errors.ts";
+import { getInventory } from "./inventory.ts";
 import { CONVERSION_HINT, mealView } from "./tracking.ts";
 
 // Recettes et « J'ai cuisiné » (issue #33), partagés par les tools MCP et l'API de l'app.
@@ -63,9 +69,21 @@ export async function recipeView(tx: Tx, recipeId: number) {
     left join public.inventory_item i on i.id = ri.inventory_item_id
     where ri.recipe_id = ${recipeId}
     order by ri.position, ri.id`;
+  // Par portion, depuis food_ref (public.recipe_totals) : jamais une valeur du modèle.
+  const [totals] = await tx<{ totals: { partial_values: boolean } }[]>`
+    select public.recipe_totals(${recipeId}, 1) as totals`;
+  const nutrition = totals
+    ? sumNutrition([
+        mealNutritionOf({
+          nutrition_totals: totals.totals,
+          partial_values: totals.totals.partial_values,
+        }),
+      ])
+    : undefined;
   return {
     ...compact({ ...recipe, is_favorite: recipe.is_favorite || undefined }),
     ingredients: ingredients.map(compact),
+    nutrition_per_portion: nutrition,
   };
 }
 
@@ -171,5 +189,20 @@ export async function cookRecipe(tx: Tx, input: CookRecipeInput) {
     ...(report && { stock: report }),
     ...(report && report.to_adjust.length > 0 && { stock_hint: TO_ADJUST_HINT }),
     ...(missing.length > 0 && { missing_conversions: missing, hint: CONVERSION_HINT }),
+  };
+}
+
+// Proposer des recettes depuis Claude (décision D5) : le stock trié par péremption, et
+// Claude propose lui-même. Aucun appel à l'API Anthropic ici ; rien n'est enregistré.
+export async function suggestRecipes(tx: Tx, filters: SuggestRecipesInput) {
+  const { items } = await getInventory(tx, {});
+  const stock = stockForRecipes(items, localDate(new Date()));
+  return {
+    filters,
+    stock,
+    hint:
+      stock.length === 0
+        ? "Le stock est vide : rien à proposer depuis la cuisine."
+        : "Proposer trois recettes faisables avec ce stock, en premier celles qui utilisent un article expires_soon, en respectant les filtres. Proposer n'enregistre rien : quand l'utilisateur en choisit une, save_recipe (item_id des articles utilisés) ; quand il l'a cuisinée, cook_recipe. Ne jamais donner de valeurs nutritionnelles soi-même.",
   };
 }
