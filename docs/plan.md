@@ -82,6 +82,15 @@ Points d'attention :
 
 Critère de fin : stock juste sans retouche.
 
+Décisions prises le 2026-11-17 (première option recommandée chaque fois) :
+- **D3** : un article suivi en niveau, ou dont l'unité ne se convertit pas, n'est pas décrémenté ; `cook_recipe` le signale (`stock.to_adjust`).
+- **D4** : supprimer un repas issu de `cook_recipe` remet en stock ce qui avait été décompté (`delete_meal`).
+- **D5** : depuis Claude, `suggest_recipes` renvoie le stock trié par péremption et Claude propose ; `save_recipe` (livré avec #33) enregistre la recette choisie. Seule l'app appelle l'API Anthropic (fonction `recipes`).
+- **D6** : la clé API reste acceptée à côté de l'OAuth.
+- **Portions** : le stock est décrémenté pour les portions cuisinées (par défaut toute la recette), le repas compte les portions mangées ; les restes ne sont pas suivis.
+
+Ordre de réalisation (branches empilées) : #33, #34, #37, #35, #36, #38.
+
 | Ordre | Issue | Contenu | Dépend de |
 |---|---|---|---|
 | 1 | #33 | RPC `cook_recipe`, tool MCP, D3 et D4. **À ajouter** : mettre à jour les instructions du serveur (`server.ts`), qui demandent aujourd'hui à Claude de corriger le stock avec `update_item` | — |

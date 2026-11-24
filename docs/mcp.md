@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`) qui expose les tools de la conception (section « Serveur MCP ») à Claude. La logique des tools vit dans `supabase/functions/_shared/` : l'API de l'app l'exécute aussi (voir `docs/api.md`). Les tools d'inventaire et de suivi sont décrits plus bas. À la connexion, le serveur envoie aussi à Claude des instructions communes (`server.ts`) : ne jamais estimer de valeur nutritionnelle, relancer sur les ambiguïtés, partir du stock pour les recettes, enregistrer le repas quand l'utilisateur dit avoir mangé et mettre à jour le stock des ingrédients pris dans le stock quand il a cuisiné, une clé d'idempotence par enregistrement, rester neutre.
+Le serveur MCP de Kura est une Edge Function Supabase (`supabase/functions/mcp/`) qui expose les tools de la conception (section « Serveur MCP ») à Claude. La logique des tools vit dans `supabase/functions/_shared/` : l'API de l'app l'exécute aussi (voir `docs/api.md`). Les tools d'inventaire et de suivi sont décrits plus bas. À la connexion, le serveur envoie aussi à Claude des instructions communes (`server.ts`) : ne jamais estimer de valeur nutritionnelle, relancer sur les ambiguïtés, partir du stock pour les recettes, enregistrer le repas quand l'utilisateur dit avoir mangé et appeler `cook_recipe` quand il a cuisiné une recette enregistrée (`save_recipe` pour une recette choisie ou dictée), une clé d'idempotence par enregistrement, rester neutre.
 
 ## Transport
 
@@ -146,7 +146,7 @@ Ciqual ne fournit ni poids moyen par pièce ni densité : « 2 œufs » ou « 15
 
 Les ids viennent de `get_summary` pour un jour, qui donne celui de chaque repas, séance et pesée.
 
-- **`delete_entry`** (`kind` : `meal`, `workout` ou `weight`, et `id`) : supprimer un repas supprime aussi ses aliments (`on delete cascade`). Les mouvements de stock qui le référencent sont gardés, avec `meal_id` remis à null : le stock n'est pas remis à jour, il se corrige avec `update_item`. La description demande à Claude de confirmer avec l'utilisateur avant d'appeler.
+- **`delete_entry`** (`kind` : `meal`, `workout` ou `weight`, et `id`) : supprimer un repas supprime aussi ses aliments (`on delete cascade`). Pour un repas, la fonction SQL `delete_meal` remet d'abord en stock ce que `cook_recipe` avait décompté (mouvement inverse `manuel`, liste `restocked`) ; un article passé depuis en niveau ou dans une autre unité n'est pas touché (`not_restocked`). Un repas saisi par `log_meal` ne touche pas au stock. Les mouvements d'origine sont gardés, avec `meal_id` remis à null. La description demande à Claude de confirmer avec l'utilisateur avant d'appeler.
 - **Corriger un repas** : le supprimer, puis le ressaisir avec `log_meal` et une nouvelle `idempotency_key`. Ses totaux dépendent de tous ses aliments, d'où l'absence de `update_meal`.
 - **`update_workout`, `update_weight`** : un champ absent garde sa valeur, `null` efface l'intensité ou les notes. Les schémas sont stricts et leurs champs portent le nom des colonnes ; les contraintes de la base (intensité de 1 à 5, poids positif) s'appliquent aussi.
 - **Idempotence** : la clé vit sur la ligne. Une fois l'entrée supprimée, rejouer l'ancien `log_*` la recréerait ; la description de `delete_entry` l'interdit. Garder une trace des clés supprimées serait surdimensionné en usage solo.
@@ -162,6 +162,37 @@ Le résumé contient :
   - pour une semaine : un résumé par jour et le poids moyen, plutôt qu'au jour le jour.
 
 Il n'y a aucun objectif ni jugement, et les descriptions des tools rappellent à Claude de rester neutre sur le poids, les quantités et les calories.
+
+## Tools de recettes
+
+| Tool | Rôle |
+|---|---|
+| `save_recipe` | Enregistre une recette choisie ou dictée : titre, portions, temps, étapes, ingrédients |
+| `get_recipes` | Recettes enregistrées (favorites d'abord), ou une recette en détail |
+| `cook_recipe` | « J'ai cuisiné » : repas et stock d'un bloc |
+
+- **Entrées** : schémas Zod et logique pure dans `packages/core/src/recipes.ts` ; opérations dans `_shared/recipes.ts`.
+- **Proposer n'enregistre rien.** Claude part de `get_inventory` et propose ; `save_recipe` n'est appelé que quand l'utilisateur choisit une recette ou dicte la sienne (`origin` : `generee` ou `manuelle`).
+
+### `save_recipe` : ingrédients rattachés, jamais devinés
+
+Les quantités valent pour toute la recette (`servings` portions), dans l'unité dite, ramenée à g, ml ou pièce. Chaque ingrédient est rattaché (`resolveRecipeIngredients`) :
+1. à un article de l'inventaire : `item_id` choisi, `null` s'il ne vient pas du stock, sinon l'article du même nom ;
+2. à `food_ref` : `food_ref_id` choisi ou `null`, sinon celui de l'article lié (y compris « aucune référence », tranché à l'achat), sinon le rapprochement prudent du nom ;
+3. faute d'article par le nom, à l'article du même aliment (« riz basmati » → l'article « Riz »).
+
+Un seul ingrédient ambigu (aliment à choisir, plusieurs articles possibles, id inconnu) et rien n'est enregistré : `saved: false` et les candidats, comme `log_meal`. Un ingrédient sans quantité (« sel ») est accepté ; il rendra le repas « valeurs partielles ». La clé d'idempotence vit sur `recipe` (`unique (user_id, idempotency_key)`).
+
+### `cook_recipe` : une transaction
+
+La fonction SQL `cook_recipe(recipe_id, portions_eaten, idempotency_key, portions_cooked, eaten_at)` (`security invoker`, donc sous RLS) fait tout ou rien :
+- **Repas** : un `meal` au titre de la recette, `servings` = portions mangées, et ses `meal_item` au prorata (quantité × mangées / `servings`), convertis en grammes comme dans `log_meal` (`food_conversion` de l'utilisateur, puis `food_ref`), puis `refresh_meal`.
+- **Stock** : pour chaque ingrédient lié à un article, la quantité × cuisinées / `servings` (par défaut la recette entière) est convertie dans l'unité de l'article (même unité, sinon par les grammes : `to_grams` puis `from_grams`), et décomptée sans descendre sous 0. Chaque décompte écrit un `stock_movement` `cuisine` avec le `meal_id` et l'unité. Les restes ne sont pas suivis.
+- **Pas décompté** (décision D3) : article suivi en niveau, ingrédient sans quantité, unité non convertible (ml sans densité, pièce sans poids), stock déjà à 0. La réponse les liste dans `stock.to_adjust` avec la raison, et `stock_hint` demande à Claude de faire préciser le reste à l'utilisateur avant `update_item`. Rien n'est estimé.
+- **Compagnon** : un `companion_event` `meal_cooked`, et `recipe_first_cooked` la première fois, avec `recipe_id` et `meal_id` seulement.
+- **Idempotence** : rejoué avec la même clé, l'appel renvoie le repas existant (`replayed: true`) sans rien décompter. Une clé déjà prise par un autre repas est refusée.
+
+Tests : `supabase/tests/cook_recipe_test.sql` (atomicité, prorata, conversions, niveaux, rejeu, remise en stock, RLS) et `mcp/tools/recipes_test.ts` (de bout en bout avec le client MCP).
 
 ## Logs
 
