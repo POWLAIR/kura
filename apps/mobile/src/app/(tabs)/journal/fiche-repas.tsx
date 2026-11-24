@@ -107,7 +107,7 @@ export default function MealSheetScreen() {
         ))}
 
         <SectionTitle>Valeurs</SectionTitle>
-        <NutritionCard nutrition={meal.nutrition} />
+        <NutritionCard nutrition={meal.nutrition} micronutrients={meal.micronutrients} />
 
         {problem ? <Notice problem>{problem}</Notice> : null}
         <Button disabled={pending} label="Supprimer le repas" onPress={remove} variant="quiet" />

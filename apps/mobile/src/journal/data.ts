@@ -2,8 +2,10 @@ import {
   type DaySummary,
   localDate,
   localTime,
+  type MicronutrientSummary,
   mealNutritionOf,
   type NutritionSummary,
+  sumMicronutrients,
   sumNutrition,
   type WeekSummary,
 } from "@kura/core";
@@ -14,11 +16,17 @@ import type { WeightRow, WorkoutRow } from "./forms";
 // Lectures du journal. Le résumé vient de l'opération get_summary (journées à l'heure de
 // Paris, comme pour Claude) ; le détail d'une entrée est lu directement, sous RLS.
 
-export type DayView = { summary: DaySummary; mealNutrition: Map<number, NutritionSummary> };
+export type DayView = {
+  summary: DaySummary;
+  mealNutrition: Map<number, NutritionSummary>;
+  // Vitamines et minéraux du jour : get_summary n'en donne pas (réponse courte pour Claude).
+  micronutrients: MicronutrientSummary;
+};
 
 export async function fetchDay(date: string): Promise<DayView> {
   const summary = await callApi<DaySummary>("get_summary", { period: "day", date });
   const mealNutrition = new Map<number, NutritionSummary>();
+  let micronutrients: MicronutrientSummary = { values: {}, incomplete: [] };
   const ids = summary.meals.map((meal) => meal.id);
   if (ids.length > 0) {
     // Valeurs de chaque repas : celles que la base a calculées, jamais recalculées ici.
@@ -30,8 +38,9 @@ export async function fetchDay(date: string): Promise<DayView> {
     for (const row of data ?? []) {
       mealNutrition.set(row.id, sumNutrition([mealNutritionOf(row)]));
     }
+    micronutrients = sumMicronutrients((data ?? []).map(mealNutritionOf));
   }
-  return { summary, mealNutrition };
+  return { summary, mealNutrition, micronutrients };
 }
 
 export function fetchWeek(date: string): Promise<WeekSummary> {
@@ -63,6 +72,7 @@ export type MealDetail = {
   label: string;
   when: string; // « jeudi 12 novembre, 12:30 », à l'heure de Paris
   nutrition: NutritionSummary;
+  micronutrients: MicronutrientSummary;
   items: {
     id: number;
     name: string;
@@ -101,6 +111,7 @@ export async function fetchMeal(id: number): Promise<MealDetail | null> {
     label: meal.label,
     when: `${longDay.format(new Date(`${localDate(at)}T00:00:00Z`))}, ${localTime(at)}`,
     nutrition: sumNutrition([mealNutritionOf(meal)]),
+    micronutrients: sumMicronutrients([mealNutritionOf(meal)]),
     items: (items ?? []).map((item) => {
       const food = (item.food_ref as { name: string } | null)?.name ?? null;
       return {

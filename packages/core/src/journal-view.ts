@@ -1,5 +1,10 @@
-import { MAIN_NUTRIENTS, type MainNutrientKey } from "./nutrients.ts";
-import { type NutritionSummary, TIMEZONE } from "./tracking.ts";
+import {
+  MAIN_NUTRIENTS,
+  type MainNutrientKey,
+  MICRONUTRIENTS,
+  type MicronutrientKey,
+} from "./nutrients.ts";
+import { type MicronutrientSummary, type NutritionSummary, TIMEZONE } from "./tracking.ts";
 
 // Affichage du journal, partagé par les écrans de l'app : résumé d'un jour ou d'une semaine
 // tel que le renvoie get_summary, frise du jour, valeurs nutritionnelles, saisie d'une heure.
@@ -48,7 +53,7 @@ export type WeekSummary = SummaryBase & {
 const decimal = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
 
 export type NutritionRow = {
-  key: MainNutrientKey;
+  key: MainNutrientKey | MicronutrientKey;
   label: string;
   // « 539 kcal », « au moins 12,5 g » (total minimum), ou « non renseignée ».
   text: string;
@@ -70,6 +75,25 @@ export function nutritionRows(summary: NutritionSummary): NutritionRow[] {
       text: known && summary.incomplete.includes(key) ? `au moins ${amount}` : amount,
       known,
       detail: label.startsWith("dont "),
+    };
+  });
+}
+
+const fine = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
+
+// Vitamines et minéraux, les plus courants d'abord (ordre de MICRONUTRIENTS). Section
+// dépliable : chaque valeur absente reste affichée « non renseignée ».
+export function micronutrientRows(summary: MicronutrientSummary): NutritionRow[] {
+  return MICRONUTRIENTS.map(({ key, label, unit }) => {
+    const value = summary.values[key];
+    const known = value !== undefined;
+    const amount = known ? `${fine.format(value)} ${unit}` : "non renseignée";
+    return {
+      key,
+      label,
+      text: known && summary.incomplete.includes(key) ? `au moins ${amount}` : amount,
+      known,
+      detail: false,
     };
   });
 }
