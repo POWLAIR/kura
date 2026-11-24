@@ -105,6 +105,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <Button label="Qu'est-ce que je mange ?" onPress={() => router.push("/recettes/proposer")} />
+
       <SectionTitle>Aujourd'hui</SectionTitle>
       {problem ? <Notice problem>{problem}</Notice> : null}
       {!day && !problem ? <ActivityIndicator color={palette.accent} /> : null}

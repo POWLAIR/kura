@@ -42,7 +42,7 @@ export default function MealSheetScreen() {
     if (!meal) return;
     const confirmed = await confirm(
       `Supprimer « ${meal.label} » ?`,
-      "Le repas et ses aliments sont supprimés. Pour le corriger, ressaisis-le ensuite. Le stock n'est pas modifié.",
+      "Le repas et ses aliments sont supprimés. Pour le corriger, ressaisis-le ensuite. S'il vient d'une recette cuisinée, ce qui avait été retiré du stock y revient.",
       "Supprimer",
     );
     if (!confirmed) return;

@@ -31,6 +31,11 @@ export function callOffProduct<T>(ean: string): Promise<T> {
   return invoke<T>("off-product", { ean });
 }
 
+// Trois recettes depuis le stock, générées par l'API Anthropic (voir docs/api.md).
+export function callRecipes<T>(filters: unknown): Promise<T> {
+  return invoke<T>("recipes", filters);
+}
+
 // Suppression totale du compte, confirmée par le mot attendu (voir docs/api.md).
 export function callDeleteAccount(confirm: string): Promise<{ deleted: true }> {
   return invoke("delete-account", { confirm });
