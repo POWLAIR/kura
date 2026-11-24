@@ -383,11 +383,8 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# Variables des Edge Functions en local (aucun secret ici). KURA_PUBLIC_URL : l'adresse vue
-# depuis l'ordinateur ; sans elle, le serveur MCP annoncerait aux clients OAuth l'adresse
-# interne http://kong:8000 (voir docs/mcp.md).
-[edge_runtime.secrets]
-KURA_PUBLIC_URL = "http://127.0.0.1:54321"
+# Pas de [edge_runtime.secrets] : `supabase functions deploy` les pousse aussi en production.
+# L'adresse locale vue par Claude est déduite dans supabase/functions/mcp/public_url.ts.
 
 [analytics]
 enabled = true
