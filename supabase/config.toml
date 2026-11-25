@@ -427,10 +427,6 @@ verify_jwt = true
 [functions.off-product]
 verify_jwt = true
 
-# Recettes depuis le stock (API Anthropic) : même authentification que l'API de l'app.
-[functions.recipes]
-verify_jwt = true
-
 # Suppression du compte : même authentification ; seule fonction à utiliser la clé
 # service_role (voir docs/api.md).
 [functions.delete-account]

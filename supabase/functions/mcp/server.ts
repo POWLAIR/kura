@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import type { Tx } from "../_shared/db.ts";
+import { registerPrompts } from "./prompts.ts";
 import { registerInventoryTools } from "./tools/inventory.ts";
 import { registerRecipeTools } from "./tools/recipes.ts";
 import { registerTrackingTools } from "./tools/tracking.ts";
@@ -7,7 +8,7 @@ import { registerTrackingTools } from "./tools/tracking.ts";
 // Requêtes de l'utilisateur authentifié : toujours sous RLS (voir asUser).
 export type UserDb = <T>(fn: (tx: Tx) => Promise<T>) => Promise<T>;
 
-export const SERVER_INFO = { name: "kura", version: "0.9.0" };
+export const SERVER_INFO = { name: "kura", version: "0.10.0" };
 
 // Règles communes à tous les tools, lues par Claude à la connexion (docs/conception.md).
 const INSTRUCTIONS = `Kura : inventaire de cuisine et suivi (repas, sport, poids), en français.
@@ -21,14 +22,16 @@ const INSTRUCTIONS = `Kura : inventaire de cuisine et suivi (repas, sport, poids
 - Pour chaque enregistrement (log_*, add_items, save_recipe, cook_recipe), créer une idempotency_key unique et la réutiliser si l'appel est rejoué.
 - Rester neutre : aucun commentaire sur le poids, les quantités mangées ou les calories, aucun objectif.`;
 
-// Un serveur neuf par requête HTTP (mode sans état). Chaque tool lit et écrit via db.
+// Un serveur neuf par requête HTTP (mode sans état). Chaque tool lit et écrit via db ; les
+// prompts n'écrivent rien.
 export function buildServer(db: UserDb): McpServer {
   const server = new McpServer(SERVER_INFO, {
-    capabilities: { tools: {} },
+    capabilities: { tools: {}, prompts: {} },
     instructions: INSTRUCTIONS,
   });
   registerInventoryTools(server, db);
   registerTrackingTools(server, db);
   registerRecipeTools(server, db);
+  registerPrompts(server);
   return server;
 }

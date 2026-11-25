@@ -5,16 +5,14 @@ import type { InventoryLine } from "./purchase.ts";
 import {
   CookRecipeInput,
   cookStockReport,
-  generatedToSaveInput,
   type IngredientContext,
   ingredientAmount,
   ingredientAvailability,
   RecipeIngredientInput,
-  recipePrompt,
+  recipeRequestText,
   resolveRecipeIngredients,
   SaveRecipeInput,
   stockForRecipes,
-  usesExpiring,
 } from "./recipes.ts";
 
 const foods: Food[] = [
@@ -216,50 +214,20 @@ describe("propositions depuis le stock", () => {
       { item_id: 4, name: "Sauce soja", amount: "Moitié" },
     ]);
   });
+});
 
-  const stock = stockForRecipes(items, today);
-  const generated = {
-    title: " Riz au yaourt ",
-    servings: 2.4,
-    total_minutes: 0,
-    steps: ["Cuire.", " "],
-    ingredients: [
-      { name: "riz", quantity: 150, unit: "g" as const, item_id: 1 },
-      { name: "yaourt", quantity: 1, unit: "piece" as const, item_id: 2 },
-      { name: "sel", quantity: null, unit: null, item_id: null },
-      { name: "beurre", quantity: 10, unit: null, item_id: 99 },
-    ],
-  };
-
-  it("generatedToSaveInput : bornes, ids inconnus ignorés, quantité sans unité retirée", () => {
-    expect(generatedToSaveInput(generated, stock, "gen-00000001")).toEqual({
-      title: "Riz au yaourt",
-      servings: 2,
-      steps: ["Cuire."],
-      ingredients: [
-        { name: "riz", quantity: 150, unit: "g", item_id: 1 },
-        { name: "yaourt", quantity: 1, unit: "piece", item_id: 2 },
-        { name: "sel" },
-        { name: "beurre" },
-      ],
-      origin: "generee",
-      idempotency_key: "gen-00000001",
-    });
-    expect(
-      generatedToSaveInput({ ...generated, ingredients: [] }, stock, "gen-00000002"),
-    ).toBeNull();
+describe("recipeRequestText", () => {
+  it("écrit la demande avec les filtres donnés", () => {
+    expect(recipeRequestText({ servings: 2, max_minutes: 30, craving: "asiatique" })).toBe(
+      "Qu'est-ce que je mange (pour 2 portions, en 30 min maximum, envie : asiatique) ? Pars de mon stock Kura (suggest_recipes) et propose-moi trois recettes, celles qui utilisent ce qui périme bientôt d'abord. Quand j'en choisis une, enregistre-la avec save_recipe.",
+    );
   });
 
-  it("usesExpiring : les articles qui périment bientôt", () => {
-    expect(usesExpiring(generated.ingredients, stock)).toEqual(["Yaourt"]);
-    expect(usesExpiring([{ item_id: 1 }], stock)).toEqual([]);
-  });
-
-  it("recipePrompt : seulement la demande et le stock", () => {
-    expect(JSON.parse(recipePrompt(stock, { max_minutes: 20 }))).toEqual({
-      demande: { max_minutes: 20 },
-      stock,
-    });
+  it("sans filtre, la question seule", () => {
+    expect(recipeRequestText({})).toMatch(/^Qu'est-ce que je mange \? Pars de mon stock/);
+    expect(recipeRequestText({ servings: 1 })).toMatch(
+      /^Qu'est-ce que je mange \(pour 1 portion\) \?/,
+    );
   });
 });
 

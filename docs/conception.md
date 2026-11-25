@@ -1,6 +1,8 @@
 # Conception — Cuisine, suivi & compagnon
 
 > Source : doc Claude « Conception — Cuisine, suivi & compagnon » (https://claude.ai/code/artifact/29349fe6-a0ba-45ec-a5f2-e9d007d19b9e), exporté le 2026-10-15. Le doc reste la référence ; ce fichier est une copie pour Claude Code.
+>
+> Modifié le 2026-11-25 (issue #79), à reporter dans le doc : Kura n'appelle plus l'API Anthropic. Recettes et chat avec Miso passent par Claude (claude.ai ou l'app Claude), avec le connecteur Kura et l'abonnement de l'utilisateur.
 
 ## Vision et périmètre
 
@@ -38,7 +40,7 @@ Cinq modules, tous branchés sur la même base Postgres et exposés à la fois d
 
 ### Recettes
 
-- Génération par l'API Claude à partir de l'inventaire, avec priorité aux produits qui périment bientôt.
+- Génération par Claude via le connecteur MCP, à partir de l'inventaire, avec priorité aux produits qui périment bientôt. L'app ne génère rien elle-même : « Qu'est-ce que je mange ? » ouvre Claude avec la demande déjà écrite, et la recette choisie est enregistrée dans Kura.
 - Filtres : temps disponible, envie (« quelque chose d'asiatique »), nombre de portions.
 - Sortie JSON structurée : ingrédients liés aux lignes de l'inventaire, quantités, étapes, temps.
 - Valeurs nutritionnelles calculées côté serveur depuis Ciqual et Open Food Facts, pas par le modèle.
@@ -69,8 +71,8 @@ Toutes les valeurs disponibles sont affichées, les plus utiles d'abord, chacune
 
 ### Compagnon et MCP
 
-- Un personnage animé qui réagit aux habitudes et sert de visage au chat dans l'app (détails plus bas).
-- Toutes les actions ci-dessus sont aussi disponibles comme tools MCP, utilisables depuis Claude sur web, desktop et mobile.
+- Un personnage animé qui réagit aux habitudes ; le toucher ouvre la conversation avec Miso dans Claude (détails plus bas).
+- Toutes les actions ci-dessus sont aussi disponibles comme tools MCP, utilisables depuis Claude sur web, desktop et mobile, avec des prompts MCP prêts à l'emploi (« Qu'est-ce que je mange ? », « Ranger mes courses », « Résumé de la semaine »).
 
 ## Architecture technique
 
@@ -78,22 +80,21 @@ Une seule base Supabase sert l'app et Claude : toute la logique métier vit dans
 
 ```
 Téléphone (Health Connect) ──► App Expo ──┐
-                                          ├──► Supabase (Postgres + RLS, Auth, Edge Functions)
-Claude (web/desktop/mobile) ──► MCP ──────┘          │
-                                                     ├──► API Anthropic (recettes, saisies libres, chat)
-                                                     ├──► Open Food Facts (codes-barres)
+                                 │        ├──► Supabase (Postgres + RLS, Auth, Edge Functions)
+                       (lien)    ▼        │          │
+Claude (web/desktop/mobile) ──► MCP ──────┘          ├──► Open Food Facts (codes-barres)
                                                      └──► Notion (export lecture seule)
 Ciqual ──(import unique)──► food_ref
 ```
 
-Health Connect alimente l'app sur le téléphone ; l'app et Claude écrivent dans la même base ; seules les Edge Functions parlent aux services externes, à part l'import Ciqual fait une fois.
+Health Connect alimente l'app sur le téléphone ; l'app et Claude écrivent dans la même base ; seules les Edge Functions parlent aux services externes, à part l'import Ciqual fait une fois. Kura n'appelle pas l'API Anthropic : ce qui demande un modèle (recettes, saisie libre, chat avec Miso) se fait dans Claude, avec l'abonnement de l'utilisateur, et revient dans la base par les tools MCP. L'app ouvre Claude par un lien.
 
 | Brique | Choix | Pourquoi |
 |---|---|---|
 | App | Expo (React Native), Android puis build web en PWA | Même langage que le backend et le MCP ; builds Android dans le cloud via EAS |
 | Backend | Supabase : Postgres, Auth, Edge Functions | Données relationnelles, RLS, serveur OAuth 2.1 compatible MCP |
 | Serveur MCP | SDK MCP TypeScript officiel, Streamable HTTP | Même code métier et mêmes schémas Zod que l'app |
-| Recettes | API Claude, sortie JSON structurée | Gère les ingrédients atypiques, répond en français |
+| Recettes | Claude via le connecteur MCP (abonnement), prompts MCP | Gère les ingrédients atypiques, répond en français ; ni clé API ni coût à l'usage |
 | Nutrition | Ciqual (import) + Open Food Facts (à la demande) | Référence française en open data + produits emballés |
 | Santé | react-native-health-connect | Intégration Expo incluse depuis la v4 |
 | Compagnon | Rive | Machine à états pilotée par l'app |
@@ -151,6 +152,8 @@ Authentification, en deux temps :
 1. Phase 1 : une clé API envoyée en en-tête fixe, configurée dans le connecteur personnalisé de Claude. Suffisant pour un usage solo.
 2. Phase 3 : le serveur OAuth 2.1 de Supabase Auth, avec enregistrement dynamique des clients. Claude agit alors en tant que l'utilisateur et la RLS s'applique.
 
+Le serveur expose aussi des prompts MCP, qui apparaissent dans le menu du connecteur sur claude.ai et en commandes `/` dans Claude Code : « Qu'est-ce que je mange ? » (temps, envie, portions), « Ranger mes courses », « Résumé de la semaine ». Ils écrivent la demande et rappellent les tools à utiliser.
+
 Le connecteur fonctionne aussi dans les apps Claude iOS et Android : on peut logger un repas à la voix sans ouvrir l'app. Alternative d'hébergement si les Edge Functions posent problème : Cloudflare Workers, qui gère les tokens OAuth nativement.
 
 ## Le compagnon
@@ -183,26 +186,28 @@ Règles de ton, valables dans l'app et dans son chat :
 - Pas de notification culpabilisante ; les rappels portent sur le stock (un produit qui périme), pas sur la personne.
 - L'humour vise la cuisine (« encore du riz ? »), jamais l'utilisateur.
 
-Dans l'app, le compagnon est aussi le visage du chat. Le chat appelle l'API Claude avec un prompt système qui fixe sa personnalité et ces règles, et lui donne accès aux mêmes fonctions que les tools MCP.
+Le compagnon est aussi le visage du chat, qui vit dans Claude et pas dans l'app : un projet claude.ai « Kura », connecteur Kura activé, dont les instructions fixent la personnalité de Miso et ces règles. Toucher le compagnon dans l'app ouvre ce projet. L'historique des conversations reste chez Claude, pas dans la base de Kura. Un chat affiché dans l'app demanderait l'API Anthropic, avec une clé et un coût à l'usage : écarté.
 
 ## Écrans et parcours
 
-Quatre onglets sur mobile, les mêmes écrans en colonnes sur desktop (build web d'Expo, installé en PWA). Le chat s'ouvre en touchant le compagnon, depuis n'importe quel écran.
+Quatre onglets sur mobile, les mêmes écrans en colonnes sur desktop (build web d'Expo, installé en PWA). Toucher le compagnon, depuis n'importe quel écran, ouvre le chat avec Miso dans Claude.
 
 | Onglet | Contenu |
 |---|---|
 | Accueil | Compagnon, résumé du jour, produits qui périment, bouton « Qu'est-ce que je mange ? » |
 | Cuisine | Inventaire par emplacement, scan, liste « À racheter » |
-| Recettes | Génération depuis le stock, favoris, recettes perso |
+| Recettes | « Qu'est-ce que je mange ? » (ouvre Claude), recettes enregistrées, favoris, recettes perso |
 | Journal | Repas, séances et pesées sur une frise par jour, tendances par semaine |
 
 Parcours « cuisiner avec ce qu'on a » :
 
-1. Accueil → « Qu'est-ce que je mange ? », avec un filtre de temps optionnel.
-2. Trois recettes proposées, celles qui utilisent un produit proche de la péremption en premier.
-3. Fiche recette avec les ingrédients cochés comme disponibles.
-4. « J'ai cuisiné », choix du nombre de portions mangées.
+1. Accueil → « Qu'est-ce que je mange ? », avec des filtres optionnels (temps, portions, envie).
+2. Claude s'ouvre avec la demande écrite et propose trois recettes depuis le stock (`suggest_recipes`), celles qui utilisent un produit proche de la péremption en premier.
+3. La recette choisie est enregistrée (`save_recipe`) ; de retour dans l'app, elle est dans l'onglet Recettes, avec ses valeurs calculées depuis Ciqual.
+4. Fiche recette, puis « J'ai cuisiné » (dans l'app ou dans Claude), choix du nombre de portions mangées.
 5. Stock décrémenté, repas ajouté au journal, compagnon content.
+
+Contrepartie assumée : la génération se fait hors de l'app, avec un aller-retour entre Kura et Claude.
 
 Parcours « ranger les courses » :
 
@@ -224,7 +229,7 @@ Repas, séances et poids sont des données de santé au sens du RGPD : on les tr
 | Service | Ce qu'il reçoit | Pourquoi |
 |---|---|---|
 | Supabase (région UE) | Toutes les données | Hébergement de la base, auth, fichiers |
-| API Anthropic | Inventaire, descriptions de repas, messages du chat | Génération de recettes, analyse des saisies libres, chat du compagnon |
+| Anthropic (Claude, via le connecteur MCP) | Ce que Claude lit par les tools : inventaire, repas, séances, pesées, et les messages de la conversation | Génération de recettes, saisie libre, chat avec Miso ; Kura n'appelle jamais l'API Anthropic lui-même |
 | Open Food Facts | Codes-barres uniquement | Fiche produit |
 | Notion | Inventaire et liste « À racheter » uniquement | Export en lecture seule ; aucune donnée de santé |
 | Health Connect | Rien n'est envoyé ; lecture seule | Import des séances et pesées |
@@ -245,9 +250,9 @@ Cinq phases sans dates fixées : le MCP arrive en premier pour valider le modèl
 |---|---|---|---|
 | 1 | Fondations | Schéma + RLS, import Ciqual, import Notion, serveur MCP, clé API | Une semaine de suivi via Claude seul |
 | 2 | App de base | Expo Android, inventaire, scan OFF, journal, export Notion, export données | Courses rangées par scan |
-| 3 | Recettes | Génération, « J'ai cuisiné », fiches nutrition, OAuth Supabase | Stock juste sans retouche |
+| 3 | Recettes | Génération par Claude (MCP), « J'ai cuisiné », fiches nutrition, OAuth Supabase | Stock juste sans retouche |
 | 4 | Santé | Health Connect, build EAS, tendance poids | Imports sans doublon |
-| 5 | Compagnon | Miso en Rive, six états, chat in-app | Six états déclenchés |
+| 5 | Compagnon | Miso en Rive, six états, chat avec Miso dans un projet claude.ai | Six états déclenchés |
 
 Une phase démarre quand le critère de la précédente est rempli. Un compagnon provisoire très simple occupe l'écran d'accueil dès la phase 2.
 
