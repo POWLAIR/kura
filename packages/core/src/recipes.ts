@@ -290,8 +290,8 @@ export const SuggestRecipesInput = z.object({
 });
 export type SuggestRecipesInput = z.infer<typeof SuggestRecipesInput>;
 
-// Article du stock tel qu'il sert à proposer des recettes, et tel qu'il part vers l'API
-// Anthropic : id, nom, quantité, péremption. Rien d'autre (docs/conception.md, « Sécurité »).
+// Article du stock tel que suggest_recipes le donne à Claude pour proposer des recettes :
+// id, nom, quantité, péremption. Rien d'autre (docs/conception.md, « Sécurité »).
 export type StockLine = {
   item_id: number;
   name: string;
@@ -323,107 +323,28 @@ export function stockForRecipes(items: InventoryItemView[], today: string): Stoc
     }));
 }
 
-// Sortie demandée au modèle (sortie structurée). Volontairement sans contraintes de bornes :
-// elles sont vérifiées ensuite par SaveRecipeInput. Aucune valeur nutritionnelle : elles
-// sont calculées depuis food_ref.
-export const GeneratedRecipe = z.object({
-  title: z.string().describe("Titre en français"),
-  servings: z.number().int().describe("Nombre de portions"),
-  total_minutes: z.number().int().describe("Temps total en minutes"),
-  steps: z.array(z.string()).describe("Étapes courtes, dans l'ordre"),
-  ingredients: z.array(
-    z.object({
-      name: z.string().describe("Ingrédient, ex. « riz basmati »"),
-      quantity: z
-        .number()
-        .nullable()
-        .describe("Quantité pour toute la recette ; null si « à votre goût »"),
-      unit: z.enum(["g", "kg", "ml", "cl", "l", "piece"]).nullable(),
-      item_id: z
-        .number()
-        .int()
-        .nullable()
-        .describe("item_id de l'article du stock utilisé ; null sinon"),
-    }),
-  ),
-});
-export type GeneratedRecipe = z.infer<typeof GeneratedRecipe>;
-
-export const GeneratedRecipes = z.object({ recipes: z.array(GeneratedRecipe) });
-export type GeneratedRecipes = z.infer<typeof GeneratedRecipes>;
-
-export const RECIPE_SYSTEM_PROMPT = `Tu proposes des recettes de cuisine maison, en français, à partir du stock d'une cuisine.
-
-- Propose exactement trois recettes différentes, faisables avec le stock.
-- Utilise en priorité les articles marqués expires_soon : au moins une recette doit en utiliser un quand il y en a.
-- Chaque ingrédient qui vient du stock porte son item_id. Tu peux ajouter des produits de base courants absents du stock (sel, poivre, eau, huile) avec item_id null ; rien d'autre hors stock.
-- Quantités pour toute la recette, dans l'unité la plus naturelle (g, kg, ml, cl, l, ou piece pour ce qui se compte) ; quantity et unit null pour « à votre goût ». Ne dépasse pas la quantité disponible d'un article.
-- Respecte le temps disponible, l'envie et le nombre de portions s'ils sont donnés ; sinon, 2 portions.
-- Étapes courtes et concrètes. Pas de valeurs nutritionnelles, pas de commentaire sur la santé, le poids ou les calories.`;
-
-// Message utilisateur : la demande et le stock, en JSON. Les noms d'articles sont des
-// données, pas des instructions.
-export function recipePrompt(stock: StockLine[], filters: SuggestRecipesInput): string {
-  return JSON.stringify({ demande: filters, stock });
-}
-
-// Recette générée → entrée de save_recipe. Un item_id hors du stock envoyé est ignoré (le
-// modèle ne peut pas lier un article qu'il n'a pas vu), une quantité sans unité aussi.
-// null si la recette est inutilisable (sans titre ni ingrédient).
-export function generatedToSaveInput(
-  recipe: GeneratedRecipe,
-  stock: StockLine[],
-  idempotencyKey: string,
-): SaveRecipeInput | null {
-  const known = new Set(stock.map((line) => line.item_id));
-  const input = {
-    title: recipe.title.trim().slice(0, 200),
-    servings: Math.min(50, Math.max(1, Math.round(recipe.servings))),
-    ...(recipe.total_minutes > 0 && {
-      total_minutes: Math.min(1440, Math.round(recipe.total_minutes)),
-    }),
-    steps: recipe.steps
-      .map((step) => step.trim().slice(0, 1000))
-      .filter(Boolean)
-      .slice(0, 50),
-    ingredients: recipe.ingredients.slice(0, 50).map((ingredient) => ({
-      name: ingredient.name.trim().slice(0, 100),
-      ...(ingredient.quantity !== null &&
-        ingredient.quantity > 0 &&
-        ingredient.unit !== null && { quantity: ingredient.quantity, unit: ingredient.unit }),
-      // Sans item_id valable, l'ingrédient est rapproché du stock par son nom, comme ailleurs.
-      ...(ingredient.item_id !== null &&
-        known.has(ingredient.item_id) && { item_id: ingredient.item_id }),
-    })),
-    origin: "generee" as const,
-    idempotency_key: idempotencyKey,
-  };
-  const parsed = SaveRecipeInput.safeParse(input);
-  return parsed.success ? parsed.data : null;
-}
-
-// Articles du stock qui périment bientôt et qu'utilise la recette : pour classer les
-// propositions (celles qui en utilisent d'abord) et le dire, sans jugement.
-export function usesExpiring(
-  ingredients: { item_id?: number | null }[],
-  stock: StockLine[],
-): string[] {
-  const soon = new Map(stock.filter((l) => l.expires_soon).map((l) => [l.item_id, l.name]));
+// Demande « Qu'est-ce que je mange ? » écrite pour Claude : le lien de l'app vers Claude et
+// le prompt MCP what_to_eat. Claude part de suggest_recipes et enregistre la recette choisie
+// avec save_recipe ; Kura n'appelle pas l'API Anthropic (issue #79).
+export function recipeRequestText(filters: SuggestRecipesInput): string {
+  const details = [
+    filters.servings ? `pour ${filters.servings} portion${filters.servings > 1 ? "s" : ""}` : null,
+    filters.max_minutes ? `en ${filters.max_minutes} min maximum` : null,
+    filters.craving ? `envie : ${filters.craving}` : null,
+  ].filter(Boolean);
   return [
-    ...new Set(
-      ingredients.flatMap((i) =>
-        i.item_id != null && soon.has(i.item_id) ? [soon.get(i.item_id) as string] : [],
-      ),
-    ),
-  ];
+    `Qu'est-ce que je mange${details.length > 0 ? ` (${details.join(", ")})` : ""} ?`,
+    "Pars de mon stock Kura (suggest_recipes) et propose-moi trois recettes, celles qui utilisent ce qui périme bientôt d'abord.",
+    "Quand j'en choisis une, enregistre-la avec save_recipe.",
+  ].join(" ");
 }
 
 // ---------------------------------------------------------------------------
 // Fiche recette dans l'app (issue #35)
 // ---------------------------------------------------------------------------
 
-// Recette telle que la renvoient get_recipes (avec recipe_id), save_recipe et la fonction
-// recipes : champs vides omis.
+// Recette telle que la renvoient get_recipes (avec recipe_id) et save_recipe : champs vides
+// omis.
 export type RecipeIngredientView = {
   name: string;
   quantity?: number;
@@ -445,8 +366,6 @@ export type RecipeView = {
   last_cooked?: string;
   ingredients: RecipeIngredientView[];
   nutrition_per_portion?: NutritionSummary;
-  // Seulement dans la réponse de la fonction recipes.
-  uses_expiring?: string[];
 };
 
 export type Availability = {

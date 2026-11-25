@@ -7,15 +7,14 @@ import {
   type RecipeView,
   type SaveRecipeInput,
   type StoredMealItem,
-  type SuggestRecipesInput,
   sumMicronutrients,
 } from "@kura/core";
-import { callApi, callRecipes } from "@/lib/api";
+import { callApi } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
-// Lectures et écritures des recettes : les opérations de l'API (mêmes que les tools MCP),
-// la fonction recipes pour les propositions, et recipe_totals en direct (sous RLS) pour le
-// détail des vitamines et minéraux.
+// Lectures et écritures des recettes : les opérations de l'API (mêmes que les tools MCP), et
+// recipe_totals en direct (sous RLS) pour le détail des vitamines et minéraux. Les
+// propositions se font dans Claude (recettes/proposer.tsx).
 
 export type RecipeSummary = Pick<
   RecipeView,
@@ -37,12 +36,6 @@ export async function fetchRecipe(
     partial_values: false,
   });
   return { recipe, micronutrients: sumMicronutrients([nutrition]) };
-}
-
-export function suggestRecipes(
-  filters: SuggestRecipesInput,
-): Promise<{ recipes: RecipeView[]; notice?: string }> {
-  return callRecipes(filters);
 }
 
 export type CookResult = {

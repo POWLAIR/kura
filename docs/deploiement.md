@@ -20,10 +20,10 @@ Mise en ligne de Kura sur Supabase, en région UE, puis branchement de Claude su
 pnpm exec supabase login
 pnpm exec supabase link --project-ref <ref>
 pnpm exec supabase db push          # applique supabase/migrations (vérifie la liste avant de valider)
-pnpm functions:deploy               # déploie les fonctions de supabase/functions : mcp, api, off-product, recipes, delete-account et notion-export (bundling côté Supabase)
+pnpm functions:deploy               # déploie les fonctions de supabase/functions : mcp, api, off-product, delete-account et notion-export (bundling côté Supabase)
 ```
 
-- **Secrets** : aucun n'est à configurer pour `mcp`, qui n'utilise que `SUPABASE_DB_URL`, fournie d'office aux Edge Functions. `api` lit en plus `SUPABASE_URL` et `SUPABASE_ANON_KEY`, fournies elles aussi ; son seul secret, `KURA_APP_ORIGINS`, ne sert qu'à l'app web (voir `docs/api.md`). `off-product` fonctionne sans secret ; `KURA_OFF_USER_AGENT` permet d'indiquer un contact à Open Food Facts (voir `docs/open-food-facts.md`). `recipes` a besoin de `ANTHROPIC_API_KEY` (`pnpm exec supabase secrets set ANTHROPIC_API_KEY=…`), sans quoi elle ne démarre pas ; seuls le stock et la demande partent vers Anthropic (voir `docs/api.md`). `delete-account` utilise `SUPABASE_SERVICE_ROLE_KEY`, fournie d'office elle aussi : c'est la seule fonction à s'en servir. `verify_jwt` est repris de `supabase/config.toml` : `false` pour `mcp`, `true` pour les autres.
+- **Secrets** : aucun n'est à configurer pour `mcp`, qui n'utilise que `SUPABASE_DB_URL`, fournie d'office aux Edge Functions. `api` lit en plus `SUPABASE_URL` et `SUPABASE_ANON_KEY`, fournies elles aussi ; son seul secret, `KURA_APP_ORIGINS`, ne sert qu'à l'app web (voir `docs/api.md`). `off-product` fonctionne sans secret ; `KURA_OFF_USER_AGENT` permet d'indiquer un contact à Open Food Facts (voir `docs/open-food-facts.md`). `delete-account` utilise `SUPABASE_SERVICE_ROLE_KEY`, fournie d'office elle aussi : c'est la seule fonction à s'en servir. `verify_jwt` est repris de `supabase/config.toml` : `false` pour `mcp`, `true` pour les autres.
 - **`packages/core`** : les fonctions l'importent hors de `supabase/functions` (import map `@kura/core`). `--use-api` l'embarque bien ; c'est vérifié au premier déploiement.
 - **Mot de passe de la base** : `db push` et `migration list --linked` passent par le rôle de connexion temporaire de la CLI. Une fois `supabase login` fait, ils n'ont pas besoin du mot de passe.
 
@@ -123,6 +123,8 @@ KURA_ENV_FILE=.env.production pnpm notion:setup --user <email> --page <lien de l
 Vérification : `select changes, synced_changes, synced_at, last_error from notion_export;` après une minute. `last_error` donne le code d'un refus de Notion.
 
 ## Exploitation
+
+- **Fonction retirée du dépôt** : `pnpm functions:deploy` ne supprime rien en ligne. `pnpm exec supabase functions delete <nom>`, puis retirer ses secrets (`supabase secrets unset`). Fait pour `recipes` et `ANTHROPIC_API_KEY` après l'issue #79.
 
 - **Nouvelle migration** : `pnpm exec supabase db push`, après merge sur `main`.
 - **Nouvelle version de la fonction** : `pnpm functions:deploy`.

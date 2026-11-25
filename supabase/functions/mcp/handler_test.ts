@@ -1,4 +1,4 @@
-import { generateApiKey, hashApiKey } from "@kura/core";
+import { generateApiKey, hashApiKey, recipeRequestText } from "@kura/core";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { assertEquals, assertRejects } from "@std/assert";
 import { createHandler, type McpCaller } from "./handler.ts";
@@ -134,6 +134,27 @@ for (const [era, negotiation] of Object.entries({
     await client.close();
   });
 }
+
+Deno.test("prompts MCP : listés, et la demande de recettes reprend les filtres", async () => {
+  const { client, connected } = connect(`Bearer ${key}`, "legacy");
+  await connected;
+  assertEquals((await client.listPrompts()).prompts.map((p) => p.name).sort(), [
+    "put_away_groceries",
+    "weekly_summary",
+    "what_to_eat",
+  ]);
+  const prompt = await client.getPrompt({
+    name: "what_to_eat",
+    arguments: { max_minutes: "30 min", servings: "deux", craving: " asiatique " },
+  });
+  const message = prompt.messages[0];
+  assertEquals(message?.role, "user");
+  assertEquals(
+    message?.content.type === "text" && message.content.text,
+    recipeRequestText({ max_minutes: 30, craving: "asiatique" }),
+  );
+  await client.close();
+});
 
 Deno.test("client MCP refusé sans clé valide", async () => {
   const { client, connected } = connect(`Bearer ${generateApiKey()}`, "legacy");

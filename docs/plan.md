@@ -1,6 +1,6 @@
 # Plan d'implémentation — ce qui reste à faire
 
-> État au 2026-11-18 (phase 3 en PR), établi depuis le code, `docs/conception.md` et les issues GitHub. La conception reste la référence ; ce plan dit dans quel ordre la réaliser et ce qui n'a pas encore d'issue.
+> État au 2026-11-25 (phase 3 déployée), établi depuis le code, `docs/conception.md` et les issues GitHub. La conception reste la référence ; ce plan dit dans quel ordre la réaliser et ce qui n'a pas encore d'issue.
 
 ## Où on en est
 
@@ -8,11 +8,11 @@
 |---|---|---|
 | 1 — Fondations | 9 fermées | Terminée, critère rempli. |
 | 2 — App de base | 13 fermées | Terminée, critère rempli. |
-| 3 — Recettes | 6 en PR empilées (#33 à #38) | Code terminé, à merger et déployer ; reste le critère de fin, à l'usage. |
+| 3 — Recettes | 6 fermées (#33 à #38), #79 en PR | Mergée et déployée le 2026-11-24 ; #79 confie la génération à Claude (plus d'API Anthropic) ; reste le critère de fin, à l'usage. |
 | 4 — Santé | 4 ouvertes (#43 à #46) | Colonnes `source` et `external_id` prêtes, avec leur contrainte d'unicité. |
 | 5 — Compagnon | 7 ouvertes (#47 à #53) | Table `companion_event` créée, jamais écrite. |
 
-Les dix tools de la conception existent. Six ont été ajoutés en plus : `set_food_conversion`, `delete_entry`, `update_workout`, `update_weight`, `save_recipe` et `get_recipes` (serveur 0.9.0, 17 tools avec `remove_item`).
+Les dix tools de la conception existent. Six ont été ajoutés en plus : `set_food_conversion`, `delete_entry`, `update_workout`, `update_weight`, `save_recipe` et `get_recipes` (serveur 0.10.0, 17 tools avec `remove_item`, et 3 prompts MCP depuis #79).
 
 ## Ce qui manquait d'issue
 
@@ -41,7 +41,7 @@ Chacune bloque l'issue indiquée. La première option est celle que je recommand
 | D6 | Clé API après OAuth | **La garder pour Claude Code et les scripts** · ou la retirer | #38 |
 | D7 | Séance saisie à la main puis importée de Health Connect | **Signaler le chevauchement et laisser choisir** · ou fusion automatique | #44 |
 | D8 | Personnage | Valider Miso, ou Yuzu, ou Pesto | #47 |
-| D9 | Historique du chat | **Non conservé côté serveur** (données de santé) · ou conservé en base sous RLS | #52 |
+| D9 | Historique du chat | Réglée par #79 : le chat avec Miso vit dans un projet claude.ai, l'historique reste chez Claude | #52 |
 | D10 | Rappels de péremption | **Notifications locales en phase 5** · ou pas de notification du tout | #53 |
 
 ## Phase 1 — à clore
@@ -85,16 +85,16 @@ Critère de fin : stock juste sans retouche.
 Décisions prises le 2026-11-17 (première option recommandée chaque fois) :
 - **D3** : un article suivi en niveau, ou dont l'unité ne se convertit pas, n'est pas décrémenté ; `cook_recipe` le signale (`stock.to_adjust`).
 - **D4** : supprimer un repas issu de `cook_recipe` remet en stock ce qui avait été décompté (`delete_meal`).
-- **D5** : depuis Claude, `suggest_recipes` renvoie le stock trié par péremption et Claude propose ; `save_recipe` (livré avec #33) enregistre la recette choisie. Seule l'app appelle l'API Anthropic (fonction `recipes`).
+- **D5** : depuis Claude, `suggest_recipes` renvoie le stock trié par péremption et Claude propose ; `save_recipe` (livré avec #33) enregistre la recette choisie. Depuis #79, l'app passe aussi par Claude : « Qu'est-ce que je mange ? » ouvre Claude avec la demande écrite ; plus de fonction `recipes` ni de clé Anthropic.
 - **D6** : la clé API reste acceptée à côté de l'OAuth.
 - **Portions** : le stock est décrémenté pour les portions cuisinées (par défaut toute la recette), le repas compte les portions mangées ; les restes ne sont pas suivis.
 
 Ordre de réalisation (branches empilées) : #33, #34, #37, #35, #36, #38.
 
 Après le merge de la pile, à faire à la main (détail dans chaque PR et `docs/deploiement.md`) :
-1. `supabase db push`, puis `pnpm functions:deploy` (nouvelle fonction `recipes`).
-2. `pnpm exec supabase secrets set ANTHROPIC_API_KEY=…`, puis un premier « Qu'est-ce que je mange ? » réel depuis l'app (jamais essayé contre l'API : pas de clé en local).
-3. Relire les fiches « À quoi ça sert » (#37) avant le merge.
+1. Fait le 2026-11-24 : `supabase db push` et `pnpm functions:deploy`. Le déploiement a poussé une variable locale en secret de production (corrigé par #78).
+2. Remplacé par #79 : plus de clé Anthropic. Après son merge, supprimer la fonction `recipes` en ligne et le secret `ANTHROPIC_API_KEY`, puis un premier « Qu'est-ce que je mange ? » réel (préremplissage `?q=` à vérifier sur le web et dans l'app Claude Android).
+3. Fait : fiches « À quoi ça sert » (#37) relues avant le merge.
 4. Dashboard Supabase : clé de signature asymétrique, serveur OAuth, Site URL de l'app web ; puis le connecteur claude.ai sans clé (#38).
 5. Le critère : cuisiner plusieurs recettes d'affilée (app et Claude), puis comparer le stock réel à `get_inventory`.
 
@@ -135,7 +135,7 @@ Critère de fin : six états déclenchés.
 | 2 | #49 État du compagnon côté serveur | Fonction pure dans `packages/core` : événements + inventaire → état, `mood`, `hunger`, déclencheurs, avec l'ordre de priorité des six états ; un test par état, et un test « série interrompue : aucune pénalité » |
 | 2 | #50 Répliques du compagnon | Phrases en français dans `packages/core`, relues ; test qui refuse toute mention du poids, des quantités ou des calories |
 | 3 | #51 Miso dans l'app | Intégration Rive (Android et web) à la place du compagnon provisoire |
-| 3 | #52 Chat in-app | Fonction `chat` (API Claude, prompt système avec la personnalité et les règles de ton, mêmes fonctions que les tools MCP via `_shared`) ; s'ouvre en touchant le compagnon depuis tout écran ; D9. Couvre aussi la saisie libre d'un repas |
+| 3 | #52 Miso dans Claude | Projet claude.ai « Kura », connecteur activé, instructions versionnées (personnalité, règles de ton) ; toucher le compagnon ouvre le projet. Pas de fonction `chat` ni de clé Anthropic (#79). Couvre aussi la saisie libre d'un repas |
 | 4 | #53 Rappels de péremption (D10) | Notifications locales, sur le stock uniquement |
 
 ## À chaque issue

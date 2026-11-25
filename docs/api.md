@@ -22,7 +22,6 @@ supabase/functions/
   mcp/              Ce que lit Claude : titres, descriptions, consignes ; auth par clé API
   api/              Ce qu'appelle l'app : les opérations, par leur nom
   off-product/      Produit par code-barres (docs/open-food-facts.md)
-  recipes/          Recettes depuis le stock, générées par l'API Anthropic (app seulement)
   delete-account/   Suppression du compte (seule à utiliser la clé service_role)
 ```
 
@@ -57,15 +56,7 @@ const { data, error } = await supabase.functions.invoke("api/add_items", {
 
 ## Recettes depuis le stock
 
-**`recipes`** (`supabase/functions/recipes/`) propose trois recettes pour l'écran « Qu'est-ce que je mange ? » : `POST /functions/v1/recipes`, corps `{ max_minutes?, craving?, servings? }` (`SuggestRecipesInput`), avec la session de l'utilisateur. C'est la seule fonction qui appelle l'API Anthropic ; depuis Claude, `suggest_recipes` renvoie le stock et Claude propose lui-même (décision D5, `docs/plan.md`).
-
-1. Le stock utilisable est lu sous RLS (`stockForRecipes`) : ni vide ni périmé, ce qui périme dans les trois jours d'abord (`expires_soon`). Stock vide : `{ recipes: [], notice }`, sans appel au modèle.
-2. **Seuls la demande et ce stock partent vers Anthropic** (`recipePrompt` : id, nom, quantité, date de péremption de chaque article). Modèle `claude-opus-5-5`, effort `medium`, sortie structurée validée par le schéma Zod `GeneratedRecipes`, repli côté serveur sur un autre modèle en cas de refus (`fallbacks: "default"`). Le prompt système (`RECIPE_SYSTEM_PROMPT`) interdit les valeurs nutritionnelles et tout commentaire sur la santé, le poids ou les calories.
-3. Chaque recette passe par `generatedToSaveInput` (bornes, `item_id` inconnus ignorés), puis par `saveRecipe` en mode souple (`origin = 'generee'`) : un ingrédient ambigu reste sans référence et compte alors comme « valeurs partielles ».
-4. Réponse : `{ recipes: [ recette, … ] }`, chaque recette comme `get_recipes`, avec `nutrition_per_portion` (calculé par `recipe_totals` depuis `food_ref`) et `uses_expiring` (articles qui périment bientôt qu'elle utilise) ; celles qui en utilisent viennent d'abord.
-5. Les recettes générées de plus de sept jours, ni favorites ni cuisinées, sont supprimées à la génération suivante.
-
-Réponses d'erreur : 400 saisie invalide, 401 sans session, 502 `generation_unavailable` (modèle injoignable, refus, sortie invalide), 500 sinon. Logs : `recipes_generated` (nombre) et `recipes_error` (étape et code), jamais le stock, la demande ni les recettes. Secret : `ANTHROPIC_API_KEY`.
+Aucune fonction de l'app ne génère de recettes, et Kura n'appelle pas l'API Anthropic (issue #79). L'écran « Qu'est-ce que je mange ? » ouvre Claude avec la demande écrite (`recipeRequestText`, `https://claude.ai/new?q=…`) ; Claude propose depuis `suggest_recipes` et enregistre la recette choisie avec `save_recipe`, qui arrive dans l'onglet Recettes (voir `docs/mcp.md`, « Tools de recettes »).
 
 ## Export et suppression du compte
 

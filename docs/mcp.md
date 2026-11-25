@@ -188,7 +188,17 @@ Il n'y a aucun objectif ni jugement, et les descriptions des tools rappellent à
 | `cook_recipe` | « J'ai cuisiné » : repas et stock d'un bloc |
 
 - **Entrées** : schémas Zod et logique pure dans `packages/core/src/recipes.ts` ; opérations dans `_shared/recipes.ts`.
-- **Proposer n'enregistre rien.** Claude part de `suggest_recipes` (même tri que la fonction `recipes` de l'app, sans appel à l'API Anthropic : décision D5) et propose ; `save_recipe` n'est appelé que quand l'utilisateur choisit une recette ou dicte la sienne (`origin` : `generee` ou `manuelle`).
+- **Proposer n'enregistre rien.** Claude part de `suggest_recipes` et propose lui-même ; `save_recipe` n'est appelé que quand l'utilisateur choisit une recette ou dicte la sienne (`origin` : `generee` ou `manuelle`). C'est le seul moyen de générer une recette : l'app ouvre Claude avec la demande écrite, Kura n'appelle pas l'API Anthropic (issue #79).
+
+## Prompts
+
+Des demandes prêtes à l'emploi (`mcp/prompts.ts`), dans le menu du connecteur sur claude.ai et en commandes `/` dans Claude Code (`/mcp__kura__what_to_eat`…). Ils n'écrivent rien : ils rédigent la demande et nomment les tools à utiliser. Leurs arguments sont du texte ; un nombre illisible est ignoré, jamais deviné.
+
+| Prompt | Titre | Arguments |
+|---|---|---|
+| `what_to_eat` | Qu'est-ce que je mange ? | `max_minutes`, `servings`, `craving`, facultatifs. Même texte que le bouton de l'app (`recipeRequestText`) |
+| `put_away_groceries` | Ranger mes courses | `groceries`, facultatif : la liste, sinon Claude attend la dictée ; puis `add_items` |
+| `weekly_summary` | Résumé de la semaine | aucun ; `get_summary` sur la semaine, sans commentaire sur le poids, les quantités ou les calories |
 
 ### `save_recipe` : ingrédients rattachés, jamais devinés
 

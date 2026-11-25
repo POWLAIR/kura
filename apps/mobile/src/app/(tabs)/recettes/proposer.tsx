@@ -1,10 +1,9 @@
-import { nutritionBrief, type RecipeView } from "@kura/core";
+import { recipeRequestText } from "@kura/core";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Button, Choice, Field, Notice, Tag } from "@/components/ui";
-import { errorMessage } from "@/lib/api-error";
-import { suggestRecipes } from "@/recipes/data";
+import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Button, Choice, Field, Notice } from "@/components/ui";
+import { claudeChatUrl } from "@/lib/claude";
 import { spacing, usePalette } from "@/theme";
 
 const TIMES = [
@@ -24,35 +23,30 @@ const SERVINGS = [
 type Time = (typeof TIMES)[number]["value"];
 type Servings = (typeof SERVINGS)[number]["value"];
 
-// « Qu'est-ce que je mange ? » : trois recettes depuis le stock, celles qui utilisent un
-// produit qui périme bientôt d'abord. Les valeurs viennent de food_ref, jamais du modèle.
+// « Qu'est-ce que je mange ? » : Claude propose trois recettes depuis le stock, avec le
+// connecteur Kura et l'abonnement de l'utilisateur ; l'app ne génère rien (issue #79). La
+// recette choisie est enregistrée par save_recipe et revient dans l'onglet Recettes.
 export default function ProposeScreen() {
   const palette = usePalette();
   const router = useRouter();
   const [time, setTime] = useState<Time>("any");
   const [servings, setServings] = useState<Servings>("2");
   const [craving, setCraving] = useState("");
-  const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [recipes, setRecipes] = useState<RecipeView[]>([]);
+  const [opened, setOpened] = useState(false);
 
-  async function propose() {
-    setBusy(true);
+  async function askClaude() {
     setProblem(null);
-    setNotice(null);
+    const text = recipeRequestText({
+      servings: Number(servings),
+      ...(time !== "any" && { max_minutes: Number(time) }),
+      ...(craving.trim() && { craving: craving.trim().slice(0, 200) }),
+    });
     try {
-      const result = await suggestRecipes({
-        servings: Number(servings),
-        ...(time !== "any" && { max_minutes: Number(time) }),
-        ...(craving.trim() && { craving: craving.trim() }),
-      });
-      setRecipes(result.recipes);
-      setNotice(result.notice ?? null);
-    } catch (error) {
-      setProblem(errorMessage(error));
-    } finally {
-      setBusy(false);
+      await Linking.openURL(claudeChatUrl(text));
+      setOpened(true);
+    } catch {
+      setProblem("Impossible d'ouvrir Claude depuis cet appareil.");
     }
   }
 
@@ -62,6 +56,10 @@ export default function ProposeScreen() {
       style={{ backgroundColor: palette.background }}
     >
       <View style={styles.column}>
+        <Text style={{ color: palette.textSecondary }}>
+          Claude regarde ce qu'il y a dans ta cuisine et propose trois recettes, celles qui
+          utilisent ce qui périme bientôt d'abord. Celle que tu choisis arrive dans tes recettes.
+        </Text>
         <Choice label="Temps disponible" onChange={setTime} options={TIMES} value={time} />
         <Choice label="Portions" onChange={setServings} options={SERVINGS} value={servings} />
         <Field
@@ -71,55 +69,20 @@ export default function ProposeScreen() {
           placeholder="quelque chose d'asiatique"
           value={craving}
         />
-        <Button
-          busy={busy}
-          label={recipes.length > 0 ? "D'autres idées" : "Proposer"}
-          onPress={propose}
-        />
-        {busy ? (
-          <Text style={{ color: palette.textSecondary }}>
-            Un instant, je regarde ce qu'il y a dans la cuisine…
-          </Text>
-        ) : null}
+        <Button label="Demander à Claude" onPress={askClaude} />
         {problem ? <Notice problem>{problem}</Notice> : null}
-        {notice ? <Notice>{notice}</Notice> : null}
-        {recipes.map((recipe) => (
-          <Pressable
-            accessibilityHint="Ouvre la recette"
-            accessibilityRole="button"
-            key={recipe.id}
-            onPress={() =>
-              router.push({ pathname: "/recettes/[id]", params: { id: String(recipe.id) } })
-            }
-            style={({ pressed }) => [
-              styles.card,
-              { backgroundColor: palette.surface, borderColor: palette.border },
-              pressed && { opacity: 0.8 },
-            ]}
-          >
-            <Text style={[styles.title, { color: palette.text }]}>{recipe.title}</Text>
-            <Text style={{ color: palette.textSecondary }}>
-              {[
-                recipe.total_minutes ? `${recipe.total_minutes} min` : null,
-                `${recipe.servings} portions`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </Text>
-            {recipe.uses_expiring && recipe.uses_expiring.length > 0 ? (
-              <View style={styles.tags}>
-                <Tag
-                  strong
-                >{`Utilise ce qui périme bientôt : ${recipe.uses_expiring.join(", ")}`}</Tag>
-              </View>
-            ) : null}
-            {recipe.nutrition_per_portion ? (
-              <Text style={[styles.note, { color: palette.textSecondary }]}>
-                Par portion : {nutritionBrief(recipe.nutrition_per_portion)}
-              </Text>
-            ) : null}
-          </Pressable>
-        ))}
+        {opened ? (
+          <>
+            <Notice>
+              Une fois la recette choisie dans Claude, elle t'attend dans l'onglet Recettes.
+            </Notice>
+            <Button
+              label="Voir mes recettes"
+              variant="secondary"
+              onPress={() => router.push("/recettes")}
+            />
+          </>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -128,8 +91,4 @@ export default function ProposeScreen() {
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, alignItems: "center" },
   column: { width: "100%", maxWidth: 720, gap: spacing.md },
-  card: { borderWidth: 1, borderRadius: 12, padding: spacing.md, gap: spacing.xs },
-  title: { fontSize: 17, fontWeight: "600" },
-  tags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  note: { fontSize: 13, lineHeight: 18 },
 });
